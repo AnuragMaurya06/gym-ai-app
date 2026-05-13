@@ -5,11 +5,15 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { goal, experience, daysPerWeek, weightKg } = body;
 
+    // Safety checks for numbers
+    const safeDays = Number(daysPerWeek) || 3;
+    const safeWeight = Number(weightKg) || 70;
+
     const workoutPlan = generateWorkoutPlan(
       String(goal),
       String(experience),
-      Number(daysPerWeek),
-      Number(weightKg)
+      safeDays,
+      safeWeight
     );
 
     return NextResponse.json({ success: true, plan: workoutPlan });
@@ -55,6 +59,8 @@ function generateWorkoutPlan(goal: string, experience: string, days: number, wei
   ];
 
   let finalRoutine = [...baseRoutine];
+  
+  // Add extra days if requested
   if (days > 3) {
     const extraDays = baseRoutine.map((day, idx) => ({
       ...day,
