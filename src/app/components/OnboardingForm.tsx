@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-// Receive userId as a prop from the parent (Login Screen)
 export default function OnboardingForm({ userId }: { userId: string }) {
-  // --- STATE VARIABLES ---
   const [formData, setFormData] = useState({
     goal: 'hypertrophy',
     experience: 'beginner',
@@ -20,10 +18,8 @@ export default function OnboardingForm({ userId }: { userId: string }) {
   const [workoutData, setWorkoutData] = useState<any[]>([]);
   const [error, setError] = useState('');
 
-  // Create a unique storage key for this user
   const storageKey = `gym_ai_plans_${userId}`;
 
-  // --- LOAD SAVED PLANS ON STARTUP ---
   useEffect(() => {
     const stored = localStorage.getItem(storageKey);
     if (stored) {
@@ -35,13 +31,11 @@ export default function OnboardingForm({ userId }: { userId: string }) {
     }
   }, [userId, storageKey]);
 
-  // --- HANDLE FORM SUBMISSION ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Ensure numbers are valid
     const submitData = {
       goal: formData.goal,
       experience: formData.experience,
@@ -67,7 +61,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
         };
 
         const updatedPlans = [...savedPlans, newPlan];
-        // Save to user-specific key
         localStorage.setItem(storageKey, JSON.stringify(updatedPlans));
         setSavedPlans(updatedPlans);
 
@@ -84,15 +77,12 @@ export default function OnboardingForm({ userId }: { userId: string }) {
     setLoading(false);
   };
 
-  // --- HANDLE EXERCISE CHECKBOXES ---
   const handleExerciseComplete = (dayIndex: number, exerciseIndex: number, completed: boolean) => {
     const newData = [...workoutData];
-    // Initialize array if needed
     while (newData.length <= dayIndex) newData.push([]);
     newData[dayIndex][exerciseIndex] = completed;
     setWorkoutData(newData);
 
-    // Save progress to local storage (User Specific)
     if (planId) {
       const updatedPlans = savedPlans.map((p) =>
         p.id === planId ? { ...p, workoutData: newData } : p
@@ -102,7 +92,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
     }
   };
 
-  // --- EXPORT PLAN TO TEXT ---
   const handleExportPDF = () => {
     if (!plan) return;
     let content = `WORKOUT PLAN\n================\n\nGoal: ${plan.goal}\nExperience: ${plan.experience}\n\n`;
@@ -120,7 +109,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
     a.click();
   };
 
-  // --- LOAD A PLAN FROM HISTORY ---
   const loadPlan = (savedPlan: any) => {
     setPlan(savedPlan.plan);
     setPlanId(savedPlan.id);
@@ -128,7 +116,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
     setShowHistory(false);
   };
 
-  // --- DELETE A PLAN FROM HISTORY ---
   const deleteSavedPlan = (id: string) => {
     const updated = savedPlans.filter((p) => p.id !== id);
     localStorage.setItem(storageKey, JSON.stringify(updated));
@@ -139,7 +126,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
     }
   };
 
-  // --- CALCULATE STATS ---
   const totalTime = plan?.weekPlan.reduce((acc: number, day: any, di: number) =>
     acc + day.exercises.reduce((sum: number, ex: any, ei: number) =>
       workoutData[di]?.[ei] ? sum + (ex.estimatedTime || 0) : sum, 0
@@ -156,9 +142,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
   const totalCount = plan?.weekPlan.reduce((acc: number, day: any) => acc + day.exercises.length, 0) || 0;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  // ================= RENDER LOGIC =================
-
-  // 1. SHOW HISTORY VIEW
   if (showHistory) {
     return (
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '48px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -191,7 +174,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
     );
   }
 
-  // 2. SHOW PLAN RESULT VIEW
   if (plan) {
     return (
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '48px 16px' }}>
@@ -205,7 +187,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
             </div>
           </div>
 
-          {/* Progress Bar */}
           <div style={{ marginBottom: '32px', padding: '24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '16px', color: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontWeight: 'bold' }}>
               <span>Progress</span>
@@ -220,7 +201,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
             </div>
           </div>
 
-          {/* Exercises List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {plan.weekPlan.map((day: any, dayIndex: number) => (
               <div key={dayIndex} style={{ padding: '24px', background: '#f9fafb', borderRadius: '16px', border: '2px solid #e5e7eb' }}>
@@ -244,7 +224,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
             ))}
           </div>
 
-          {/* Fitness Tools Button */}
           <div style={{ marginTop: '40px', textAlign: 'center', paddingTop: '24px', borderTop: '2px solid #e5e7eb' }}>
             <button 
               onClick={() => window.location.href = '/tools'} 
@@ -258,12 +237,9 @@ export default function OnboardingForm({ userId }: { userId: string }) {
     );
   }
 
-  // 3. SHOW FORM INPUT VIEW
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '48px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ maxWidth: '640px', width: '100%', background: 'white', borderRadius: '24px', padding: '40px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-        
-        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <h1 style={{ fontSize: '48px', fontWeight: 'bold', color: '#1a1a1a', marginBottom: '8px' }}>🏋️ Gym AI</h1>
           <p style={{ color: '#666', fontSize: '18px' }}>Build your personalized workout plan</p>
@@ -276,8 +252,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
-          {/* Goal Select */}
           <div>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px', color: '#1a1a1a' }}>What's your goal?</label>
             <select 
@@ -292,7 +266,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
             </select>
           </div>
 
-          {/* Experience Select */}
           <div>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px', color: '#1a1a1a' }}>Experience Level</label>
             <select 
@@ -306,7 +279,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
             </select>
           </div>
 
-          {/* Days Slider */}
           <div>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '12px', color: '#1a1a1a' }}>
               Days per week: <span style={{ color: '#667eea', fontSize: '20px' }}>{Number(formData.daysPerWeek)}</span>
@@ -323,7 +295,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
             </div>
           </div>
 
-          {/* Weight Input */}
           <div>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px', color: '#1a1a1a' }}>Your weight (kg)</label>
             <input 
@@ -335,7 +306,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
             />
           </div>
 
-          {/* Submit Button */}
           <button 
             type="submit" 
             disabled={loading} 
@@ -345,7 +315,6 @@ export default function OnboardingForm({ userId }: { userId: string }) {
           </button>
         </form>
 
-        {/* Fitness Tools Button */}
         <div style={{ textAlign: 'center', marginTop: '24px' }}>
           <button 
             onClick={() => window.location.href = '/tools'} 
