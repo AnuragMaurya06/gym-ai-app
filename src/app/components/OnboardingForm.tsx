@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
-export default function OnboardingForm() {
+// Receive userId as a prop from the parent (Login Screen)
+export default function OnboardingForm({ userId }: { userId: string }) {
   // --- STATE VARIABLES ---
   const [formData, setFormData] = useState({
     goal: 'hypertrophy',
@@ -19,9 +20,12 @@ export default function OnboardingForm() {
   const [workoutData, setWorkoutData] = useState<any[]>([]);
   const [error, setError] = useState('');
 
+  // Create a unique storage key for this user
+  const storageKey = `gym_ai_plans_${userId}`;
+
   // --- LOAD SAVED PLANS ON STARTUP ---
   useEffect(() => {
-    const stored = localStorage.getItem('gym_ai_plans');
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
       try {
         setSavedPlans(JSON.parse(stored));
@@ -29,7 +33,7 @@ export default function OnboardingForm() {
         console.error('Failed to load plans:', e);
       }
     }
-  }, []);
+  }, [userId, storageKey]);
 
   // --- HANDLE FORM SUBMISSION ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,7 +67,8 @@ export default function OnboardingForm() {
         };
 
         const updatedPlans = [...savedPlans, newPlan];
-        localStorage.setItem('gym_ai_plans', JSON.stringify(updatedPlans));
+        // Save to user-specific key
+        localStorage.setItem(storageKey, JSON.stringify(updatedPlans));
         setSavedPlans(updatedPlans);
 
         setPlanId(newPlan.id);
@@ -87,12 +92,12 @@ export default function OnboardingForm() {
     newData[dayIndex][exerciseIndex] = completed;
     setWorkoutData(newData);
 
-    // Save progress to local storage
+    // Save progress to local storage (User Specific)
     if (planId) {
       const updatedPlans = savedPlans.map((p) =>
         p.id === planId ? { ...p, workoutData: newData } : p
       );
-      localStorage.setItem('gym_ai_plans', JSON.stringify(updatedPlans));
+      localStorage.setItem(storageKey, JSON.stringify(updatedPlans));
       setSavedPlans(updatedPlans);
     }
   };
@@ -126,7 +131,7 @@ export default function OnboardingForm() {
   // --- DELETE A PLAN FROM HISTORY ---
   const deleteSavedPlan = (id: string) => {
     const updated = savedPlans.filter((p) => p.id !== id);
-    localStorage.setItem('gym_ai_plans', JSON.stringify(updated));
+    localStorage.setItem(storageKey, JSON.stringify(updated));
     setSavedPlans(updated);
     if (planId === id) {
       setPlan(null);
@@ -210,7 +215,7 @@ export default function OnboardingForm() {
               <div style={{ width: `${progressPercent}%`, height: '100%', background: '#10b981', transition: 'width 0.5s' }}></div>
             </div>
             <div style={{ display: 'flex', gap: '24px', marginTop: '12px', fontSize: '14px' }}>
-              <span>️ {totalTime} min</span>
+              <span>⏱️ {totalTime} min</span>
               <span>🔥 {totalCalories} cal</span>
             </div>
           </div>
@@ -245,7 +250,7 @@ export default function OnboardingForm() {
               onClick={() => window.location.href = '/tools'} 
               style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', padding: '12px 32px', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
             >
-              ️ Open Fitness Tools
+              🛠️ Open Fitness Tools
             </button>
           </div>
         </div>
@@ -295,7 +300,7 @@ export default function OnboardingForm() {
               onChange={(e) => setFormData({...formData, experience: e.target.value})} 
               style={{ width: '100%', padding: '16px', border: '2px solid #e5e5e5', borderRadius: '12px', fontSize: '16px', color: '#1a1a1a', backgroundColor: 'white' }}
             >
-              <option value="beginner"> Beginner</option>
+              <option value="beginner">🌱 Beginner</option>
               <option value="intermediate">🚀 Intermediate</option>
               <option value="advanced">🔥 Advanced</option>
             </select>

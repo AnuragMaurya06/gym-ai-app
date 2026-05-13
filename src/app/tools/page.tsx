@@ -5,50 +5,48 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export default function ToolsPage() {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
-
+  const [uid, setUid] = useState<string>('guest');
+  
+  useEffect(() => {
+    const savedId = localStorage.getItem('gym-ai-user-id');
+    setUid(savedId || 'guest');
+  }, []);
+  
   const showNotification = useCallback((msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
   }, []);
 
-  // ==========================================
-  // 1. WORKOUT CALENDAR
-  // ==========================================
+  // 1. CALENDAR
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [workoutName, setWorkoutName] = useState('');
   const [workoutDuration, setWorkoutDuration] = useState('');
 
-  const workoutsRef = useRef(workouts);
-  useEffect(() => { workoutsRef.current = workouts; }, [workouts]);
-  const progressDataRef = useRef<any[]>([]);
-
   useEffect(() => {
-    const saved = localStorage.getItem('workout_calendar');
+    const saved = localStorage.getItem(`workout_calendar_${uid}`);
     if (saved) try { setWorkouts(JSON.parse(saved)); } catch {}
-  }, []);
+  }, [uid]);
 
   const saveWorkout = useCallback(() => {
     if (!workoutName.trim() || !workoutDuration) return showNotification('❌ Enter name & duration');
     const durationNum = parseInt(workoutDuration);
     if (isNaN(durationNum) || durationNum <= 0) return showNotification('❌ Invalid duration');
-
     const workout = { id: Date.now(), date: selectedDate, name: workoutName.trim(), duration: durationNum, exercises: 5, calories: Math.round(durationNum * 8) };
-    const updated = [...workoutsRef.current, workout];
+    const updated = [...workouts, workout];
     setWorkouts(updated);
-    localStorage.setItem('workout_calendar', JSON.stringify(updated));
+    localStorage.setItem(`workout_calendar_${uid}`, JSON.stringify(updated));
     setWorkoutName(''); setWorkoutDuration('');
     showNotification('✅ Workout saved!');
-    checkAchievements(updated.length, progressDataRef.current.length);
-  }, [workoutName, workoutDuration, selectedDate, showNotification]);
+  }, [workoutName, workoutDuration, selectedDate, workouts, uid, showNotification]);
 
   const deleteWorkout = useCallback((id: number) => {
-    const updated = workoutsRef.current.filter(w => w.id !== id);
+    const updated = workouts.filter(w => w.id !== id);
     setWorkouts(updated);
-    localStorage.setItem('workout_calendar', JSON.stringify(updated));
+    localStorage.setItem(`workout_calendar_${uid}`, JSON.stringify(updated));
     showNotification('🗑️ Workout deleted');
-  }, [showNotification]);
+  }, [workouts, uid, showNotification]);
 
   const getCalendarDays = useCallback(() => {
     const year = calendarMonth.getFullYear(), month = calendarMonth.getMonth();
@@ -61,47 +59,42 @@ export default function ToolsPage() {
     }
     for (let i = 1; i <= daysInMonth; i++) {
       const d = new Date(year, month, i);
-      days.push({ date: d.toISOString().split('T')[0], day: i, isCurrentMonth: true, hasWorkout: workoutsRef.current.some(w => w.date.startsWith(d.toISOString().split('T')[0])) });
+      days.push({ date: d.toISOString().split('T')[0], day: i, isCurrentMonth: true, hasWorkout: workouts.some(w => w.date.startsWith(d.toISOString().split('T')[0])) });
     }
     while (days.length < 42) days.push({ date: '', day: days.length - 35 - daysInMonth + 1, isCurrentMonth: false, hasWorkout: false });
     return days;
-  }, [calendarMonth, workoutsRef]);
+  }, [calendarMonth, workouts]);
 
-  // ==========================================
-  // 2. PROGRESS CHARTS
-  // ==========================================
+  // 2. PROGRESS
   const [progressData, setProgressData] = useState<any[]>([]);
   const [progressMetric, setProgressMetric] = useState('');
   const [progressValue, setProgressValue] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('progress_data');
-    if (saved) try { const p = JSON.parse(saved); setProgressData(p); progressDataRef.current = p; } catch {}
-  }, []);
+    const saved = localStorage.getItem(`progress_data_${uid}`);
+    if (saved) try { setProgressData(JSON.parse(saved)); } catch {}
+  }, [uid]);
 
   const addProgressEntry = useCallback(() => {
     if (!progressMetric.trim() || !progressValue) return showNotification('❌ Enter metric & value');
     const val = parseFloat(progressValue);
     if (isNaN(val)) return showNotification('❌ Invalid value');
     const entry = { id: Date.now(), date: new Date().toISOString(), metric: progressMetric.trim(), value: val };
-    const updated = [...progressDataRef.current, entry];
-    setProgressData(updated); progressDataRef.current = updated;
-    localStorage.setItem('progress_data', JSON.stringify(updated));
+    const updated = [...progressData, entry];
+    setProgressData(updated);
+    localStorage.setItem(`progress_data_${uid}`, JSON.stringify(updated));
     setProgressMetric(''); setProgressValue('');
     showNotification('✅ Progress saved!');
-    checkAchievements(workoutsRef.current.length, updated.length);
-  }, [progressMetric, progressValue, showNotification]);
+  }, [progressMetric, progressValue, progressData, uid, showNotification]);
 
   const deleteProgressEntry = useCallback((id: number) => {
-    const updated = progressDataRef.current.filter(e => e.id !== id);
-    setProgressData(updated); progressDataRef.current = updated;
-    localStorage.setItem('progress_data', JSON.stringify(updated));
+    const updated = progressData.filter(e => e.id !== id);
+    setProgressData(updated);
+    localStorage.setItem(`progress_data_${uid}`, JSON.stringify(updated));
     showNotification('🗑️ Entry deleted');
-  }, [showNotification]);
+  }, [progressData, uid, showNotification]);
 
-  // ==========================================
   // 3. ACHIEVEMENTS
-  // ==========================================
   const [achievements, setAchievements] = useState<string[]>([]);
   const [newAchievement, setNewAchievement] = useState<string | null>(null);
   const achievementList = [
@@ -114,69 +107,38 @@ export default function ToolsPage() {
   ];
 
   useEffect(() => {
-    const saved = localStorage.getItem('achievements');
+    const saved = localStorage.getItem(`achievements_${uid}`);
     if (saved) try { setAchievements(JSON.parse(saved)); } catch {}
-  }, []);
+  }, [uid]);
 
-  const checkAchievements = useCallback((workoutCount: number, progressCount: number) => {
-    const newUnlocks: string[] = [];
-    achievementList.forEach(ach => {
-      if (achievements.includes(ach.id)) return;
-      if ((ach.id === 'first_workout' && workoutCount >= 1) ||
-          (ach.id === 'week_warrior' && workoutCount >= 7) ||
-          (ach.id === 'month_master' && workoutCount >= 30) ||
-          (ach.id === 'century_club' && workoutCount >= 100) ||
-          (ach.id === 'hydration_hero' && workoutCount >= 1) ||
-          (ach.id === 'progress_tracker' && progressCount >= 10)) {
-        newUnlocks.push(ach.id);
-        setNewAchievement(ach.name);
-        setTimeout(() => setNewAchievement(null), 4000);
-      }
-    });
-    if (newUnlocks.length) {
-      const updated = [...new Set([...achievements, ...newUnlocks])];
-      setAchievements(updated);
-      localStorage.setItem('achievements', JSON.stringify(updated));
-      showNotification(`🏆 Unlocked: ${newUnlocks.map(id => achievementList.find(a => a.id === id)?.name).join(', ')}`);
-    }
-  }, [achievements, showNotification]);
-
-  // ==========================================
-  // 4. SOCIAL FEED
-  // ==========================================
+  // 4. SOCIAL
   const [sharedWorkouts, setSharedWorkouts] = useState<any[]>([]);
   const [shareName, setShareName] = useState('');
   const [shareDuration, setShareDuration] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('shared_workouts');
+    const saved = localStorage.getItem(`shared_workouts_${uid}`);
     if (saved) try { setSharedWorkouts(JSON.parse(saved)); } catch {}
-  }, []);
+  }, [uid]);
 
   const shareWorkout = useCallback(() => {
     if (!shareName.trim() || !shareDuration) return showNotification('❌ Enter name & duration');
     const d = parseInt(shareDuration);
     if (isNaN(d) || d <= 0) return showNotification('❌ Invalid duration');
     const updated = [{ id: Date.now(), name: shareName.trim(), duration: d, exercises: 5, calories: d*8, sharedAt: new Date().toISOString(), likes: 0 }, ...sharedWorkouts];
-    setSharedWorkouts(updated); localStorage.setItem('shared_workouts', JSON.stringify(updated));
+    setSharedWorkouts(updated); 
+    localStorage.setItem(`shared_workouts_${uid}`, JSON.stringify(updated));
     setShareName(''); setShareDuration('');
     showNotification('📤 Shared!');
-  }, [shareName, shareDuration, sharedWorkouts, showNotification]);
+  }, [shareName, shareDuration, sharedWorkouts, uid, showNotification]);
 
   const likeWorkout = useCallback((id: number) => {
     const u = sharedWorkouts.map(w => w.id === id ? {...w, likes: (w.likes||0)+1} : w);
-    setSharedWorkouts(u); localStorage.setItem('shared_workouts', JSON.stringify(u));
-  }, [sharedWorkouts]);
+    setSharedWorkouts(u); 
+    localStorage.setItem(`shared_workouts_${uid}`, JSON.stringify(u));
+  }, [sharedWorkouts, uid]);
 
-  const deleteSharedWorkout = useCallback((id: number) => {
-    const u = sharedWorkouts.filter(w => w.id !== id);
-    setSharedWorkouts(u); localStorage.setItem('shared_workouts', JSON.stringify(u));
-    showNotification('🗑️ Deleted');
-  }, [sharedWorkouts, showNotification]);
-
-  // ==========================================
-  // 5. MUSIC PLAYER (ENHANCED WITH IMPORT)
-  // ==========================================
+  // 5. MUSIC PLAYER
   const [playlist, setPlaylist] = useState<any[]>([
     { id: 1, title: 'Beast Mode (Default)', url: '', isDefault: true },
     { id: 2, title: 'Pump It Up (Default)', url: '', isDefault: true },
@@ -188,91 +150,49 @@ export default function ToolsPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Cleanup object URLs
-  useEffect(() => {
-    return () => {
-      playlist.forEach(song => {
-        if (song.url && !song.isDefault) URL.revokeObjectURL(song.url);
-      });
-    };
-  }, [playlist]);
-
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    
-    const newSongs = files.map(f => ({
-      id: Date.now() + Math.random(),
-      title: f.name.replace(/\.[^/.]+$/, ''),
-      url: URL.createObjectURL(f),
-      isDefault: false
-    }));
-    
+    const newSongs = files.map(f => ({ id: Date.now() + Math.random(), title: f.name.replace(/\.[^/.]+$/, ''), url: URL.createObjectURL(f), isDefault: false }));
     setPlaylist(prev => [...prev, ...newSongs]);
     if (!currentSong) setCurrentSong(newSongs[0]);
     showNotification(`🎵 Imported ${files.length} song${files.length > 1 ? 's' : ''}!`);
-    e.target.value = ''; // Reset input
+    e.target.value = '';
   };
 
   const togglePlay = useCallback(() => {
     if (!currentSong || !audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current.play();
-      setIsPlaying(true);
-    }
+    if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); }
+    else { audioRef.current.play(); setIsPlaying(true); }
   }, [currentSong, isPlaying]);
 
-  const playSong = useCallback((song: any) => {
-    setCurrentSong(song);
-    setIsPlaying(true);
-    setProgress(0);
-  }, []);
-
+  const playSong = useCallback((song: any) => { setCurrentSong(song); setIsPlaying(true); setProgress(0); }, []);
   const nextSong = useCallback(() => {
     if (!currentSong) return;
     const idx = playlist.findIndex(s => s.id === currentSong.id);
-    const next = playlist[(idx + 1) % playlist.length];
-    setCurrentSong(next);
-    setProgress(0);
-    setIsPlaying(true);
+    setCurrentSong(playlist[(idx + 1) % playlist.length]); setProgress(0); setIsPlaying(true);
   }, [currentSong, playlist]);
-
   const prevSong = useCallback(() => {
     if (!currentSong) return;
     const idx = playlist.findIndex(s => s.id === currentSong.id);
-    const prev = playlist[(idx - 1 + playlist.length) % playlist.length];
-    setCurrentSong(prev);
-    setProgress(0);
-    setIsPlaying(true);
+    setCurrentSong(playlist[(idx - 1 + playlist.length) % playlist.length]); setProgress(0); setIsPlaying(true);
   }, [currentSong, playlist]);
 
-  const formatTime = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
-
+  const formatTime = (s: number) => { const m = Math.floor(s / 60); return `${m}:${Math.floor(s % 60).toString().padStart(2, '0')}`; };
   const seekTo = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!audioRef.current || !duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const pct = x / rect.width;
-    audioRef.current.currentTime = pct * duration;
+    audioRef.current.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
   };
 
-  // ==========================================
   // 6. ANALYTICS
-  // ==========================================
   const getAnalytics = useCallback(() => {
-    const total = workoutsRef.current.length;
-    const week = workoutsRef.current.filter(w => new Date(w.date) >= new Date(Date.now() - 604800000)).length;
-    const mins = workoutsRef.current.reduce((a, w) => a + (w.duration||0), 0);
+    const total = workouts.length;
+    const week = workouts.filter(w => new Date(w.date) >= new Date(Date.now() - 604800000)).length;
+    const mins = workouts.reduce((a, w) => a + (w.duration||0), 0);
     let streak = 0;
     if (total > 0) {
-      const dates = [...new Set(workoutsRef.current.map(w => w.date.split('T')[0]))].sort((a,b) => new Date(b).getTime()-new Date(a).getTime());
+      const dates = [...new Set(workouts.map(w => w.date.split('T')[0]))].sort((a,b) => new Date(b).getTime()-new Date(a).getTime());
       const today = new Date().toISOString().split('T')[0];
       const yesterday = new Date(Date.now()-86400000).toISOString().split('T')[0];
       if (dates[0]===today||dates[0]===yesterday) {
@@ -284,11 +204,9 @@ export default function ToolsPage() {
       }
     }
     return { total, week, mins, streak, unlocked: achievements.length, totalAch: achievementList.length };
-  }, [achievements]);
+  }, [workouts, achievements]);
 
-  // ==========================================
-  // 7-14. CALCULATORS & TOOLS (UNCHANGED LOGIC)
-  // ==========================================
+  // 7-14. CALCULATORS
   const [bmiH, setBmiH] = useState(170), [bmiW, setBmiW] = useState(70);
   const bmiVal = (bmiW / ((bmiH/100)**2)).toFixed(1);
   
@@ -302,7 +220,12 @@ export default function ToolsPage() {
   useEffect(()=>{ let i:any; if(restRun&&timeL>0) i=setInterval(()=>setTimeL(t=>t-1),1000); else if(timeL===0&&restRun){setRestRun(false);showNotification('⏱️ Time\'s up!');} return()=>clearInterval(i); },[restRun,timeL,showNotification]);
   
   const [glasses, setGlasses] = useState(0), [gGoal, setGGoal] = useState(8);
-  useEffect(()=>{ const s=localStorage.getItem('hydration_glasses'),g=localStorage.getItem('hydration_goal'),d=localStorage.getItem('hydration_date'); if(d===new Date().toDateString()&&s) setGlasses(parseInt(s)); else {setGlasses(0);localStorage.setItem('hydration_date',new Date().toDateString());} if(g) setGGoal(parseInt(g)); },[]);
+  useEffect(()=>{ 
+    const s=localStorage.getItem(`hydration_glasses_${uid}`),g=localStorage.getItem(`hydration_goal_${uid}`),d=localStorage.getItem(`hydration_date_${uid}`); 
+    if(d===new Date().toDateString()&&s) setGlasses(parseInt(s)); 
+    else {setGlasses(0);localStorage.setItem(`hydration_date_${uid}`,new Date().toDateString());} 
+    if(g) setGGoal(parseInt(g)); 
+  },[uid]);
   
   const [mCal, setMCal] = useState(2000), [mRat, setMRat] = useState<'balanced'|'lowcarb'|'highprotein'>('balanced');
   const mSplit = mRat==='lowcarb'?{p:0.4,c:0.2,f:0.4}:mRat==='highprotein'?{p:0.4,c:0.3,f:0.3}:{p:0.3,c:0.4,f:0.3};
@@ -313,31 +236,29 @@ export default function ToolsPage() {
   const [bfW, setBfW] = useState(85), [bfN, setBfN] = useState(38), [bfH, setBfH] = useState(175);
   const bfPct = Math.max(0, 86.010*Math.log10(bfW-bfN)-70.041*Math.log10(bfH)+36.76).toFixed(1);
 
-  // ==========================================
   // RENDER
-  // ==========================================
   const renderTool = () => {
     if (!activeTool) return null;
     return (
       <div style={{background:'white',borderRadius:'24px',padding:'32px',boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}}>
         <div style={{display:'flex',alignItems:'center',marginBottom:'24px',justifyContent:'space-between'}}>
-          <button onClick={()=>setActiveTool(null)} style={{padding:'8px 16px',background:'#f3f4f6',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer',marginRight:'16px'}}>← Back</button>
+          <button onClick={()=>setActiveTool(null)} style={{padding:'12px 24px',background:'#667eea',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer',marginRight:'16px',boxShadow:'0 4px 12px rgba(102,126,234,0.3)'}}>← Back</button>
           <h2 style={{fontSize:'28px',fontWeight:'bold',color:'#111827',margin:0,textTransform:'uppercase'}}>{activeTool}</h2>
         </div>
 
         {activeTool==='calendar' && (
           <div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
-              <button onClick={()=>setCalendarMonth(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1))} style={{padding:'8px 16px',background:'#e5e7eb',border:'none',borderRadius:'8px',cursor:'pointer'}}>← Prev</button>
+              <button onClick={()=>setCalendarMonth(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1))} style={{padding:'12px 24px',background:'#667eea',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(102,126,234,0.3)'}}>← Prev</button>
               <h3 style={{margin:0,fontSize:'20px'}}>{calendarMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'})}</h3>
-              <button onClick={()=>setCalendarMonth(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1))} style={{padding:'8px 16px',background:'#e5e7eb',border:'none',borderRadius:'8px',cursor:'pointer'}}>Next →</button>
+              <button onClick={()=>setCalendarMonth(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1))} style={{padding:'12px 24px',background:'#667eea',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(102,126,234,0.3)'}}>Next →</button>
             </div>
             <div style={{marginBottom:'24px',padding:'16px',background:'#f9fafb',borderRadius:'12px'}}>
               <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'8px',textAlign:'center'}}>
                 {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=><div key={d} style={{fontWeight:'bold',color:'#6b7280',padding:'8px'}}>{d}</div>)}
                 {getCalendarDays().map((d,i)=>{
                   const isToday=d.date===new Date().toISOString().split('T')[0], sel=d.date===selectedDate;
-                  return <button key={i} onClick={()=>d.isCurrentMonth&&d.date&&setSelectedDate(d.date)} disabled={!d.isCurrentMonth} style={{padding:'12px',borderRadius:'8px',border:sel?'2px solid #667eea':'none',background:d.hasWorkout?'#667eea':isToday?'#f3f4f6':d.isCurrentMonth?'white':'transparent',color:d.hasWorkout?'white':d.isCurrentMonth?'#111827':'#9ca3af',fontWeight:d.hasWorkout||sel?'bold':'normal',cursor:d.isCurrentMonth?'pointer':'default',opacity:d.isCurrentMonth?1:0.3}}>{d.day}</button>;
+                  return <button key={i} onClick={()=>d.isCurrentMonth&&d.date&&setSelectedDate(d.date)} disabled={!d.isCurrentMonth} style={{padding:'12px',borderRadius:'8px',border:sel?'3px solid #667eea':'2px solid #e5e7eb',background:d.hasWorkout?'#667eea':isToday?'#f3f4f6':d.isCurrentMonth?'white':'transparent',color:d.hasWorkout?'white':d.isCurrentMonth?'#111827':'#9ca3af',fontWeight:d.hasWorkout||sel?'bold':'normal',cursor:d.isCurrentMonth?'pointer':'default',opacity:d.isCurrentMonth?1:0.3}}>{d.day}</button>;
                 })}
               </div>
             </div>
@@ -346,7 +267,7 @@ export default function ToolsPage() {
               {workouts.filter(w=>w.date.startsWith(selectedDate)).length===0?<p style={{color:'#6b7280',margin:0}}>None logged.</p>:workouts.filter(w=>w.date.startsWith(selectedDate)).map(w=>(
                 <div key={w.id} style={{padding:'12px',background:'white',borderRadius:'8px',marginBottom:'8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <div><p style={{margin:0,fontWeight:'bold'}}>{w.name}</p><p style={{margin:'4px 0 0',fontSize:'14px',color:'#6b7280'}}>{w.duration} min</p></div>
-                  <button onClick={()=>deleteWorkout(w.id)} style={{padding:'6px 12px',background:'#ef4444',color:'white',border:'none',borderRadius:'6px',cursor:'pointer',fontWeight:'bold'}}>🗑️</button>
+                  <button onClick={()=>deleteWorkout(w.id)} style={{padding:'8px 16px',background:'#ef4444',color:'white',border:'none',borderRadius:'6px',cursor:'pointer',fontWeight:'bold',boxShadow:'0 2px 8px rgba(239,68,68,0.3)'}}>🗑️</button>
                 </div>
               ))}
             </div>
@@ -355,7 +276,7 @@ export default function ToolsPage() {
               <div style={{display:'flex',gap:'12px',flexWrap:'wrap'}}>
                 <input type="text" value={workoutName} onChange={e=>setWorkoutName(e.target.value)} placeholder="Name" style={{padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb',flex:1,minWidth:'150px'}}/>
                 <input type="number" value={workoutDuration} onChange={e=>setWorkoutDuration(e.target.value)} placeholder="Min" style={{padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb',width:'120px'}}/>
-                <button onClick={saveWorkout} style={{padding:'12px 24px',background:'#10b981',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer'}}>+ Save</button>
+                <button onClick={saveWorkout} style={{padding:'12px 24px',background:'#10b981',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(16,185,129,0.3)'}}>+ Save</button>
               </div>
             </div>
           </div>
@@ -367,7 +288,7 @@ export default function ToolsPage() {
             <div style={{display:'flex',gap:'12px',marginBottom:'24px',flexWrap:'wrap'}}>
               <input type="text" value={progressMetric} onChange={e=>setProgressMetric(e.target.value)} placeholder="Metric" style={{padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb',flex:1,minWidth:'200px'}}/>
               <input type="number" value={progressValue} onChange={e=>setProgressValue(e.target.value)} placeholder="Value" style={{padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb',width:'120px'}}/>
-              <button onClick={addProgressEntry} style={{padding:'12px 24px',background:'#667eea',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer'}}>+ Add</button>
+              <button onClick={addProgressEntry} style={{padding:'12px 24px',background:'#667eea',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(102,126,234,0.3)'}}>+ Add</button>
             </div>
             {progressData.length>0 && <div style={{padding:'20px',background:'#f9fafb',borderRadius:'12px',maxHeight:'300px',overflowY:'auto'}}>
               <h4 style={{margin:'0 0 12px 0'}}>Entries</h4>
@@ -402,9 +323,9 @@ export default function ToolsPage() {
               {sharedWorkouts.map(w=><div key={w.id} style={{padding:'20px',background:'white',borderRadius:'12px',border:'2px solid #e5e7eb'}}>
                 <div style={{display:'flex',justifyContent:'space-between',marginBottom:'12px'}}>
                   <div><p style={{fontWeight:'bold',margin:0}}>{w.name}</p><p style={{color:'#6b7280',fontSize:'14px',margin:'4px 0 0'}}>{w.duration} min • {w.calories} cal</p></div>
-                  <button onClick={()=>deleteSharedWorkout(w.id)} style={{background:'#ef4444',color:'white',border:'none',borderRadius:'6px',padding:'6px 12px',fontWeight:'bold',cursor:'pointer'}}>🗑️</button>
+                  <button onClick={()=>{const u=sharedWorkouts.filter(x=>x.id!==w.id);setSharedWorkouts(u);localStorage.setItem(`shared_workouts_${uid}`,JSON.stringify(u));showNotification('🗑️ Deleted');}} style={{background:'#ef4444',color:'white',border:'none',borderRadius:'6px',padding:'8px 16px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 2px 8px rgba(239,68,68,0.3)'}}>🗑️</button>
                 </div>
-                <button onClick={()=>likeWorkout(w.id)} style={{padding:'8px 16px',background:'#fee2e2',border:'none',borderRadius:'8px',cursor:'pointer'}}>❤️ {w.likes||0}</button>
+                <button onClick={()=>likeWorkout(w.id)} style={{padding:'10px 20px',background:'#667eea',color:'white',border:'none',borderRadius:'8px',cursor:'pointer',boxShadow:'0 4px 12px rgba(102,126,234,0.3)'}}>❤️ {w.likes||0}</button>
               </div>)}
             </div>}
             <div style={{marginTop:'24px',padding:'20px',background:'#ecfdf5',borderRadius:'12px'}}>
@@ -412,84 +333,88 @@ export default function ToolsPage() {
               <div style={{display:'flex',gap:'12px',flexWrap:'wrap'}}>
                 <input type="text" value={shareName} onChange={e=>setShareName(e.target.value)} placeholder="Name" style={{padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb',flex:1}}/>
                 <input type="number" value={shareDuration} onChange={e=>setShareDuration(e.target.value)} placeholder="Min" style={{padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb',width:'120px'}}/>
-                <button onClick={shareWorkout} style={{padding:'12px 24px',background:'#10b981',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer'}}>📤 Share</button>
+                <button onClick={shareWorkout} style={{padding:'12px 24px',background:'#10b981',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(16,185,129,0.3)'}}>📤 Share</button>
               </div>
             </div>
           </div>
         )}
-
-        {activeTool==='music' && (
-          <div>
-            {/* Hidden Audio Element */}
-        {/* Hidden Audio Element */}
-<audio
-  ref={audioRef}
-  src={currentSong?.url || ''}
-  onTimeUpdate={() => setProgress(audioRef.current?.currentTime || 0)}
-  onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
-  onEnded={nextSong}
-  onPlay={() => setIsPlaying(true)}
-  onPause={() => setIsPlaying(false)}
-/>
-            {/* Hidden File Input */}
-            <input type="file" accept="audio/*" multiple ref={fileInputRef} onChange={handleFileImport} style={{display:'none'}} />
-
-            <div style={{padding:'32px',background:'linear-gradient(135deg,#667eea 0%,#764ba2 100%)',borderRadius:'16px',color:'white',marginBottom:'24px',textAlign:'center'}}>
-              {currentSong ? (
-                <>
-                  <div style={{width:'120px',height:'120px',background:'rgba(255,255,255,0.2)',borderRadius:'50%',margin:'0 auto 16px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'48px'}}>🎵</div>
-                  <h3 style={{margin:'0 0 8px 0',fontSize:'24px'}}>{currentSong.title}</h3>
-                  <p style={{margin:'0 0 24px 0',opacity:0.8}}>{currentSong.isDefault ? 'Default Track' : 'Imported'}</p>
-                  
-                  {/* Progress Bar */}
-                  <div style={{marginBottom:'24px',cursor:'pointer'}} onClick={seekTo}>
-                    <div style={{height:'8px',background:'rgba(255,255,255,0.3)',borderRadius:'4px',overflow:'hidden'}}>
-                      <div style={{width:`${duration ? (progress/duration)*100 : 0}%`,height:'100%',background:'white',transition:'width 0.1s linear'}}></div>
-                    </div>
-                    <div style={{display:'flex',justifyContent:'space-between',marginTop:'8px',fontSize:'12px',opacity:0.9}}>
-                      <span>{formatTime(progress)}</span>
-                      <span>{formatTime(duration)}</span>
-                    </div>
-                  </div>
-
-                  {/* Controls */}
-                  <div style={{display:'flex',justifyContent:'center',gap:'20px',alignItems:'center'}}>
-                    <button onClick={prevSong} style={{padding:'12px 20px',background:'rgba(255,255,255,0.2)',color:'white',border:'none',borderRadius:'50px',cursor:'pointer'}}>⏮️</button>
-                    <button onClick={togglePlay} style={{padding:'16px 48px',background:'white',color:'#667eea',border:'none',borderRadius:'50px',fontSize:'20px',fontWeight:'bold',cursor:'pointer'}}>
-                      {isPlaying ? '⏸️' : '▶️'}
-                    </button>
-                    <button onClick={nextSong} style={{padding:'12px 20px',background:'rgba(255,255,255,0.2)',color:'white',border:'none',borderRadius:'50px',cursor:'pointer'}}>⏭️</button>
-                  </div>
-                </>
-              ) : (
-                <div style={{padding:'40px'}}>
-                  <p style={{fontSize:'48px',marginBottom:'16px'}}>🎵</p>
-                  <p>Select or import a song to start!</p>
-                </div>
-              )}
+{activeTool==='music' && (
+  <div>
+    {/* Hidden Audio Element */}
+    <audio 
+      ref={audioRef} 
+      src={currentSong?.url || ''} 
+      onTimeUpdate={() => setProgress(audioRef.current?.currentTime || 0)} 
+      onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)} 
+      onEnded={nextSong} 
+      onPlay={() => setIsPlaying(true)} 
+      onPause={() => setIsPlaying(false)} 
+    />
+    
+    {/* Hidden File Input */}
+    <input 
+      type="file" 
+      accept="audio/*" 
+      multiple 
+      ref={fileInputRef} 
+      onChange={handleFileImport} 
+      style={{display:'none'}} 
+    />
+    
+    <div style={{padding:'32px',background:'linear-gradient(135deg,#667eea 0%,#764ba2 100%)',borderRadius:'16px',color:'white',marginBottom:'24px',textAlign:'center'}}>
+      {currentSong ? (
+        <>
+          <div style={{width:'120px',height:'120px',background:'rgba(255,255,255,0.2)',borderRadius:'50%',margin:'0 auto 16px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'48px'}}>🎵</div>
+          <h3 style={{margin:'0 0 8px 0',fontSize:'24px'}}>{currentSong.title}</h3>
+          <p style={{margin:'0 0 24px 0',opacity:0.8}}>{currentSong.isDefault ? 'Default Track' : 'Imported'}</p>
+          
+          {/* Progress Bar */}
+          <div style={{marginBottom:'24px',cursor:'pointer'}} onClick={seekTo}>
+            <div style={{height:'8px',background:'rgba(255,255,255,0.3)',borderRadius:'4px',overflow:'hidden'}}>
+              <div style={{width:`${duration ? (progress/duration)*100 : 0}%`,height:'100%',background:'white',transition:'width 0.1s linear'}}></div>
             </div>
-
-            {/* Import Button & Playlist */}
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px',flexWrap:'wrap',gap:'12px'}}>
-              <h3 style={{margin:0}}>Playlist</h3>
-              <button onClick={()=>fileInputRef.current?.click()} style={{padding:'10px 20px',background:'#10b981',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer'}}>📥 Import Music</button>
-            </div>
-
-            <div style={{display:'flex',flexDirection:'column',gap:'12px',maxHeight:'400px',overflowY:'auto'}}>
-              {playlist.map(song=>(
-                <div key={song.id} onClick={()=>playSong(song)} style={{padding:'16px',background:currentSong?.id===song.id?'#f3f4f6':'white',borderRadius:'12px',border:`2px solid ${currentSong?.id===song.id?'#667eea':'#e5e7eb'}`,cursor:'pointer',display:'flex',alignItems:'center',gap:'16px'}}>
-                  <div style={{width:'40px',height:'40px',background:'#e5e7eb',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px'}}>🎵</div>
-                  <div style={{flex:1}}>
-                    <p style={{fontWeight:'bold',margin:0}}>{song.title}</p>
-                    <p style={{margin:'4px 0 0',color:'#6b7280',fontSize:'12px'}}>{song.isDefault ? 'Built-in' : 'Imported'}</p>
-                  </div>
-                  {currentSong?.id===song.id && isPlaying && <span style={{color:'#10b981'}}>▶️</span>}
-                </div>
-              ))}
-              {playlist.length===0 && <p style={{textAlign:'center',color:'#6b7280',padding:'40px'}}>Playlist empty. Import songs!</p>}
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:'8px',fontSize:'12px',opacity:0.9}}>
+              <span>{formatTime(progress)}</span>
+              <span>{formatTime(duration)}</span>
             </div>
           </div>
-        )}
+
+          {/* Controls */}
+          <div style={{display:'flex',justifyContent:'center',gap:'20px',alignItems:'center'}}>
+            <button onClick={prevSong} style={{padding:'12px 24px',background:'white',color:'#667eea',border:'none',borderRadius:'50px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(0,0,0,0.2)'}}>⏮️</button>
+            <button onClick={togglePlay} style={{padding:'16px 48px',background:'white',color:'#667eea',border:'none',borderRadius:'50px',fontSize:'20px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(0,0,0,0.2)'}}>{isPlaying ? '⏸️' : '▶️'}</button>
+            <button onClick={nextSong} style={{padding:'12px 24px',background:'white',color:'#667eea',border:'none',borderRadius:'50px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(0,0,0,0.2)'}}>⏭️</button>
+          </div>
+        </>
+      ) : (
+        <div style={{padding:'40px'}}>
+          <p style={{fontSize:'48px',marginBottom:'16px'}}>🎵</p>
+          <p>Select or import a song to start!</p>
+        </div>
+      )}
+    </div>
+
+    {/* Import Button & Playlist */}
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px',flexWrap:'wrap',gap:'12px'}}>
+      <h3 style={{margin:0}}>Playlist</h3>
+      <button onClick={()=>fileInputRef.current?.click()} style={{padding:'12px 24px',background:'#10b981',color:'white',border:'none',borderRadius:'8px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(16,185,129,0.3)'}}>📥 Import Music</button>
+    </div>
+
+    <div style={{display:'flex',flexDirection:'column',gap:'12px',maxHeight:'400px',overflowY:'auto'}}>
+      {playlist.map(song=>(
+        <div key={song.id} onClick={()=>playSong(song)} style={{padding:'16px',background:currentSong?.id===song.id?'#f3f4f6':'white',borderRadius:'12px',border:`2px solid ${currentSong?.id===song.id?'#667eea':'#e5e7eb'}`,cursor:'pointer',display:'flex',alignItems:'center',gap:'16px'}}>
+          <div style={{width:'40px',height:'40px',background:'#e5e7eb',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px'}}>🎵</div>
+          <div style={{flex:1}}>
+            <p style={{fontWeight:'bold',margin:0}}>{song.title}</p>
+            <p style={{margin:'4px 0 0',color:'#6b7280',fontSize:'12px'}}>{song.isDefault ? 'Built-in' : 'Imported'}</p>
+          </div>
+          {currentSong?.id===song.id && isPlaying && <span style={{color:'#10b981'}}>▶️</span>}
+        </div>
+      ))}
+      {playlist.length===0 && <p style={{textAlign:'center',color:'#6b7280',padding:'40px'}}>Playlist empty. Import songs!</p>}
+    </div>
+  </div>
+)}
 
         {activeTool==='analytics' && (
           <div>
@@ -512,92 +437,21 @@ export default function ToolsPage() {
           </div>
         )}
 
-        {activeTool==='bmi' && (
-          <div>
-            <label style={{display:'block',fontWeight:'bold',marginBottom:'8px'}}>Height: {bmiH} cm</label>
-            <input type="range" min="140" max="220" value={bmiH} onChange={e=>setBmiH(parseInt(e.target.value))} style={{width:'100%',marginBottom:'24px'}}/>
-            <label style={{display:'block',fontWeight:'bold',marginBottom:'8px'}}>Weight: {bmiW} kg</label>
-            <input type="range" min="40" max="150" value={bmiW} onChange={e=>setBmiW(parseInt(e.target.value))} style={{width:'100%',marginBottom:'24px'}}/>
-            <div style={{padding:'32px',background:'linear-gradient(135deg,#667eea,#764ba2)',borderRadius:'16px',color:'white',textAlign:'center'}}>
-              <p style={{fontSize:'72px',fontWeight:'bold',margin:0}}>{bmiVal}</p>
-              <p style={{fontSize:'24px',fontWeight:'bold',marginTop:'8px'}}>{parseFloat(bmiVal)<18.5?'Underweight':parseFloat(bmiVal)<25?'Normal':parseFloat(bmiVal)<30?'Overweight':'Obese'}</p>
-            </div>
-          </div>
-        )}
+        {activeTool==='bmi' && <div><label style={{display:'block',fontWeight:'bold',marginBottom:'8px'}}>Height: {bmiH} cm</label><input type="range" min="140" max="220" value={bmiH} onChange={e=>setBmiH(parseInt(e.target.value))} style={{width:'100%',marginBottom:'24px'}}/><label style={{display:'block',fontWeight:'bold',marginBottom:'8px'}}>Weight: {bmiW} kg</label><input type="range" min="40" max="150" value={bmiW} onChange={e=>setBmiW(parseInt(e.target.value))} style={{width:'100%',marginBottom:'24px'}}/><div style={{padding:'32px',background:'linear-gradient(135deg,#667eea,#764ba2)',borderRadius:'16px',color:'white',textAlign:'center'}}><p style={{fontSize:'72px',fontWeight:'bold',margin:0}}>{bmiVal}</p><p style={{fontSize:'24px',fontWeight:'bold',marginTop:'8px'}}>{parseFloat(bmiVal)<18.5?'Underweight':parseFloat(bmiVal)<25?'Normal':parseFloat(bmiVal)<30?'Overweight':'Obese'}</p></div></div>}
 
-        {activeTool==='calories' && (
-          <div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px',marginBottom:'16px'}}>
-              <div><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Gender</label><select value={cG} onChange={e=>setCG(e.target.value as any)} style={{width:'100%',padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb'}}><option value="male">Male</option><option value="female">Female</option></select></div>
-              <div><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Age: {cA}</label><input type="range" min="15" max="80" value={cA} onChange={e=>setCA(parseInt(e.target.value))} style={{width:'100%'}}/></div>
-            </div>
-            <label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Height: {cH} cm</label><input type="range" min="140" max="220" value={cH} onChange={e=>setCH(parseInt(e.target.value))} style={{width:'100%',marginBottom:'16px'}}/>
-            <label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Weight: {cW} kg</label><input type="range" min="40" max="150" value={cW} onChange={e=>setCW(parseInt(e.target.value))} style={{width:'100%',marginBottom:'16px'}}/>
-            <label style={{fontWeight:'bold',marginBottom:'8px',display:'block'}}>Activity</label><select value={cAct} onChange={e=>setCAct(parseFloat(e.target.value))} style={{width:'100%',padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb',marginBottom:'24px'}}><option value={1.2}>Sedentary</option><option value={1.375}>Light</option><option value={1.55}>Moderate</option><option value={1.725}>Active</option><option value={1.9}>Very Active</option></select>
-            <div style={{padding:'24px',background:'#ecfdf5',borderRadius:'16px',border:'2px solid #10b981',textAlign:'center'}}><p style={{fontSize:'16px',fontWeight:'bold',margin:'0 0 8px 0'}}>Maintenance</p><p style={{fontSize:'48px',fontWeight:'bold',color:'#059669',margin:0}}>{tdee}</p><p style={{color:'#047857'}}>cal/day</p></div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px',marginTop:'24px'}}>
-              <div style={{padding:'16px',background:'#fef2f2',borderRadius:'12px',textAlign:'center'}}><p style={{fontWeight:'bold',color:'#dc2626'}}>Loss</p><p style={{fontSize:'28px',fontWeight:'bold',color:'#b91c1c'}}>{tdee-500}</p></div>
-              <div style={{padding:'16px',background:'#eff6ff',borderRadius:'12px',textAlign:'center'}}><p style={{fontWeight:'bold',color:'#2563eb'}}>Gain</p><p style={{fontSize:'28px',fontWeight:'bold',color:'#1d4ed8'}}>{tdee+300}</p></div>
-            </div>
-          </div>
-        )}
+        {activeTool==='calories' && <div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px',marginBottom:'16px'}}><div><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Gender</label><select value={cG} onChange={e=>setCG(e.target.value as any)} style={{width:'100%',padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb'}}><option value="male">Male</option><option value="female">Female</option></select></div><div><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Age: {cA}</label><input type="range" min="15" max="80" value={cA} onChange={e=>setCA(parseInt(e.target.value))} style={{width:'100%'}}/></div></div><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Height: {cH} cm</label><input type="range" min="140" max="220" value={cH} onChange={e=>setCH(parseInt(e.target.value))} style={{width:'100%',marginBottom:'16px'}}/><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Weight: {cW} kg</label><input type="range" min="40" max="150" value={cW} onChange={e=>setCW(parseInt(e.target.value))} style={{width:'100%',marginBottom:'16px'}}/><label style={{fontWeight:'bold',marginBottom:'8px',display:'block'}}>Activity</label><select value={cAct} onChange={e=>setCAct(parseFloat(e.target.value))} style={{width:'100%',padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb',marginBottom:'24px'}}><option value={1.2}>Sedentary</option><option value={1.375}>Light</option><option value={1.55}>Moderate</option><option value={1.725}>Active</option><option value={1.9}>Very Active</option></select><div style={{padding:'24px',background:'#ecfdf5',borderRadius:'16px',border:'2px solid #10b981',textAlign:'center'}}><p style={{fontSize:'16px',fontWeight:'bold',margin:'0 0 8px 0'}}>Maintenance</p><p style={{fontSize:'48px',fontWeight:'bold',color:'#059669',margin:0}}>{tdee}</p><p style={{color:'#047857'}}>cal/day</p></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px',marginTop:'24px'}}><div style={{padding:'16px',background:'#fef2f2',borderRadius:'12px',textAlign:'center'}}><p style={{fontWeight:'bold',color:'#dc2626'}}>Loss</p><p style={{fontSize:'28px',fontWeight:'bold',color:'#b91c1c'}}>{tdee-500}</p></div><div style={{padding:'16px',background:'#eff6ff',borderRadius:'12px',textAlign:'center'}}><p style={{fontWeight:'bold',color:'#2563eb'}}>Gain</p><p style={{fontSize:'28px',fontWeight:'bold',color:'#1d4ed8'}}>{tdee+300}</p></div></div></div>}
 
-        {activeTool==='onerm' && (
-          <div>
-            <label style={{fontWeight:'bold',marginBottom:'8px',display:'block'}}>Weight: {rmW} kg</label><input type="range" min="10" max="300" value={rmW} onChange={e=>setRmW(parseInt(e.target.value))} style={{width:'100%',marginBottom:'24px'}}/>
-            <label style={{fontWeight:'bold',marginBottom:'8px',display:'block'}}>Reps: {rmR}</label><input type="range" min="1" max="15" value={rmR} onChange={e=>setRmR(parseInt(e.target.value))} style={{width:'100%',marginBottom:'24px'}}/>
-            <div style={{padding:'24px',background:'linear-gradient(135deg,#f59e0b,#d97706)',borderRadius:'16px',color:'white',textAlign:'center'}}><p style={{fontSize:'18px',margin:'0 0 8px 0',opacity:0.9}}>1 Rep Max</p><p style={{fontSize:'72px',fontWeight:'bold',margin:0}}>{oneRm} kg</p></div>
-            <div style={{marginTop:'24px',padding:'16px',background:'#fffbeb',borderRadius:'12px',border:'2px solid #f59e0b'}}><h3 style={{margin:'0 0 12px 0',fontSize:'16px'}}>Zones</h3><p>90%: {Math.round(oneRm*0.9)} kg</p><p>75%: {Math.round(oneRm*0.75)} kg</p><p>60%: {Math.round(oneRm*0.6)} kg</p></div>
-          </div>
-        )}
+        {activeTool==='onerm' && <div><label style={{fontWeight:'bold',marginBottom:'8px',display:'block'}}>Weight: {rmW} kg</label><input type="range" min="10" max="300" value={rmW} onChange={e=>setRmW(parseInt(e.target.value))} style={{width:'100%',marginBottom:'24px'}}/><label style={{fontWeight:'bold',marginBottom:'8px',display:'block'}}>Reps: {rmR}</label><input type="range" min="1" max="15" value={rmR} onChange={e=>setRmR(parseInt(e.target.value))} style={{width:'100%',marginBottom:'24px'}}/><div style={{padding:'24px',background:'linear-gradient(135deg,#f59e0b,#d97706)',borderRadius:'16px',color:'white',textAlign:'center'}}><p style={{fontSize:'18px',margin:'0 0 8px 0',opacity:0.9}}>1 Rep Max</p><p style={{fontSize:'72px',fontWeight:'bold',margin:0}}>{oneRm} kg</p></div><div style={{marginTop:'24px',padding:'16px',background:'#fffbeb',borderRadius:'12px',border:'2px solid #f59e0b'}}><h3 style={{margin:'0 0 12px 0',fontSize:'16px'}}>Zones</h3><p>90%: {Math.round(oneRm*0.9)} kg</p><p>75%: {Math.round(oneRm*0.75)} kg</p><p>60%: {Math.round(oneRm*0.6)} kg</p></div></div>}
 
-        {activeTool==='rest' && (
-          <div>
-            <div style={{display:'flex',gap:'8px',justifyContent:'center',marginBottom:'24px',flexWrap:'wrap'}}>{[30,60,90,120,180].map(s=><button key={s} onClick={()=>{setRestS(s);setTimeL(s);setRestRun(false);}} style={{padding:'8px 16px',borderRadius:'20px',border:'none',background:restS===s?'#667eea':'#e5e7eb',color:restS===s?'white':'#374151',fontWeight:'bold',cursor:'pointer'}}>{s}s</button>)}</div>
-            <div style={{padding:'40px',background:restRun?'#fee2e2':'#ecfdf5',borderRadius:'24px',textAlign:'center',border:restRun?'2px solid #ef4444':'2px solid #10b981'}}><p style={{fontSize:'96px',fontWeight:'bold',margin:0,color:restRun?'#dc2626':'#059669',fontFamily:'monospace'}}>{Math.floor(timeL/60)}:{(timeL%60).toString().padStart(2,'0')}</p>{timeL===0 && <p style={{color:'#dc2626',fontWeight:'bold',marginTop:'16px'}}>TIME'S UP!</p>}</div>
-            <div style={{display:'flex',gap:'12px',justifyContent:'center',marginTop:'24px'}}>{!restRun?<button onClick={()=>setRestRun(true)} style={{padding:'16px 48px',background:'#10b981',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer'}}>▶️ Start</button>:<button onClick={()=>setRestRun(false)} style={{padding:'16px 48px',background:'#f59e0b',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer'}}>⏸️ Pause</button>}<button onClick={()=>{setRestRun(false);setTimeL(restS);}} style={{padding:'16px 48px',background:'#6b7280',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer'}}>🔄 Reset</button></div>
-          </div>
-        )}
+        {activeTool==='rest' && <div><div style={{display:'flex',gap:'8px',justifyContent:'center',marginBottom:'24px',flexWrap:'wrap'}}>{[30,60,90,120,180].map(s=><button key={s} onClick={()=>{setRestS(s);setTimeL(s);setRestRun(false);}} style={{padding:'10px 20px',borderRadius:'20px',border:'none',background:restS===s?'#667eea':'#e5e7eb',color:restS===s?'white':'#374151',fontWeight:'bold',cursor:'pointer',boxShadow:restS===s?'0 4px 12px rgba(102,126,234,0.3)':'none'}}>{s}s</button>)}</div><div style={{padding:'40px',background:restRun?'#fee2e2':'#ecfdf5',borderRadius:'24px',textAlign:'center',border:restRun?'2px solid #ef4444':'2px solid #10b981'}}><p style={{fontSize:'96px',fontWeight:'bold',margin:0,color:restRun?'#dc2626':'#059669',fontFamily:'monospace'}}>{Math.floor(timeL/60)}:{(timeL%60).toString().padStart(2,'0')}</p>{timeL===0 && <p style={{color:'#dc2626',fontWeight:'bold',marginTop:'16px'}}>TIME'S UP!</p>}</div><div style={{display:'flex',gap:'12px',justifyContent:'center',marginTop:'24px'}}>{!restRun?<button onClick={()=>setRestRun(true)} style={{padding:'16px 48px',background:'#10b981',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(16,185,129,0.3)'}}>▶️ Start</button>:<button onClick={()=>setRestRun(false)} style={{padding:'16px 48px',background:'#f59e0b',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(245,158,11,0.3)'}}>⏸️ Pause</button>}<button onClick={()=>{setRestRun(false);setTimeL(restS);}} style={{padding:'16px 48px',background:'#6b7280',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(107,114,128,0.3)'}}>🔄 Reset</button></div></div>}
 
-        {activeTool==='hydration' && (
-          <div style={{textAlign:'center'}}>
-            <div style={{padding:'32px',background:'#dbeafe',borderRadius:'24px',marginBottom:'24px'}}><p style={{fontSize:'64px',marginBottom:'16px'}}>💧</p><p style={{fontSize:'32px',fontWeight:'bold',color:'#2563eb'}}>{glasses} / {gGoal}</p><div style={{marginTop:'16px',height:'12px',background:'white',borderRadius:'10px',overflow:'hidden'}}><div style={{width:`${Math.min((glasses/gGoal)*100,100)}%`,height:'100%',background:'#3b82f6',transition:'width 0.3s'}}></div></div></div>
-            <div style={{display:'flex',gap:'12px',justifyContent:'center',marginBottom:'24px'}}><button onClick={()=>{setGlasses(g=>g+1);localStorage.setItem('hydration_glasses',(glasses+1).toString());}} style={{padding:'16px 32px',background:'#3b82f6',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer'}}>+ Add</button><button onClick={()=>{setGlasses(0);localStorage.setItem('hydration_glasses','0');}} style={{padding:'16px 32px',background:'#ef4444',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer'}}>Reset</button></div>
-            <label style={{fontWeight:'bold',display:'block',marginBottom:'8px'}}>Goal</label><input type="range" min="4" max="16" value={gGoal} onChange={e=>{setGGoal(parseInt(e.target.value));localStorage.setItem('hydration_goal',e.target.value);}} style={{width:'100%'}}/>
-          </div>
-        )}
+        {activeTool==='hydration' && <div style={{textAlign:'center'}}><div style={{padding:'32px',background:'#dbeafe',borderRadius:'24px',marginBottom:'24px'}}><p style={{fontSize:'64px',marginBottom:'16px'}}>💧</p><p style={{fontSize:'32px',fontWeight:'bold',color:'#2563eb'}}>{glasses} / {gGoal}</p><div style={{marginTop:'16px',height:'12px',background:'white',borderRadius:'10px',overflow:'hidden'}}><div style={{width:`${Math.min((glasses/gGoal)*100,100)}%`,height:'100%',background:'#3b82f6',transition:'width 0.3s'}}></div></div></div><div style={{display:'flex',gap:'12px',justifyContent:'center',marginBottom:'24px'}}><button onClick={()=>{const n=glasses+1;setGlasses(n);localStorage.setItem(`hydration_glasses_${uid}`,n.toString());}} style={{padding:'16px 32px',background:'#3b82f6',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(59,130,246,0.3)'}}>+ Add</button><button onClick={()=>{setGlasses(0);localStorage.setItem(`hydration_glasses_${uid}`,'0');}} style={{padding:'16px 32px',background:'#ef4444',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(239,68,68,0.3)'}}>Reset</button></div><label style={{fontWeight:'bold',display:'block',marginBottom:'8px'}}>Goal</label><input type="range" min="4" max="16" value={gGoal} onChange={e=>{setGGoal(parseInt(e.target.value));localStorage.setItem(`hydration_goal_${uid}`,e.target.value);}} style={{width:'100%'}}/></div>}
 
-        {activeTool==='macros' && (
-          <div>
-            <label style={{fontWeight:'bold',marginBottom:'8px',display:'block'}}>Calories: {mCal}</label><input type="range" min="1000" max="4000" step="100" value={mCal} onChange={e=>setMCal(parseInt(e.target.value))} style={{width:'100%',marginBottom:'24px'}}/>
-            <div style={{display:'flex',gap:'8px',justifyContent:'center',marginBottom:'24px'}}>{['balanced','highprotein','lowcarb'].map(r=><button key={r} onClick={()=>setMRat(r as any)} style={{padding:'8px 16px',borderRadius:'20px',border:'none',background:mRat===r?'#8b5cf6':'#e5e7eb',color:mRat===r?'white':'#374151',fontWeight:'bold',cursor:'pointer',textTransform:'capitalize'}}>{r}</button>)}</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'16px'}}>
-              <div style={{padding:'16px',background:'#fee2e2',borderRadius:'12px',textAlign:'center'}}><p style={{fontSize:'32px',fontWeight:'bold',color:'#dc2626'}}>{Math.round((mCal*mSplit.p)/4)}g</p><p style={{fontWeight:'bold'}}>Protein</p></div>
-              <div style={{padding:'16px',background:'#dbeafe',borderRadius:'12px',textAlign:'center'}}><p style={{fontSize:'32px',fontWeight:'bold',color:'#2563eb'}}>{Math.round((mCal*mSplit.c)/4)}g</p><p style={{fontWeight:'bold'}}>Carbs</p></div>
-              <div style={{padding:'16px',background:'#fef3c7',borderRadius:'12px',textAlign:'center'}}><p style={{fontSize:'32px',fontWeight:'bold',color:'#d97706'}}>{Math.round((mCal*mSplit.f)/9)}g</p><p style={{fontWeight:'bold'}}>Fats</p></div>
-            </div>
-          </div>
-        )}
+        {activeTool==='macros' && <div><label style={{fontWeight:'bold',marginBottom:'8px',display:'block'}}>Calories: {mCal}</label><input type="range" min="1000" max="4000" step="100" value={mCal} onChange={e=>setMCal(parseInt(e.target.value))} style={{width:'100%',marginBottom:'24px'}}/><div style={{display:'flex',gap:'8px',justifyContent:'center',marginBottom:'24px'}}>{['balanced','highprotein','lowcarb'].map(r=><button key={r} onClick={()=>setMRat(r as any)} style={{padding:'10px 20px',borderRadius:'20px',border:'none',background:mRat===r?'#8b5cf6':'#e5e7eb',color:mRat===r?'white':'#374151',fontWeight:'bold',cursor:'pointer',boxShadow:mRat===r?'0 4px 12px rgba(139,92,246,0.3)':'none',textTransform:'capitalize'}}>{r}</button>)}</div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'16px'}}><div style={{padding:'16px',background:'#fee2e2',borderRadius:'12px',textAlign:'center'}}><p style={{fontSize:'32px',fontWeight:'bold',color:'#dc2626'}}>{Math.round((mCal*mSplit.p)/4)}g</p><p style={{fontWeight:'bold'}}>Protein</p></div><div style={{padding:'16px',background:'#dbeafe',borderRadius:'12px',textAlign:'center'}}><p style={{fontSize:'32px',fontWeight:'bold',color:'#2563eb'}}>{Math.round((mCal*mSplit.c)/4)}g</p><p style={{fontWeight:'bold'}}>Carbs</p></div><div style={{padding:'16px',background:'#fef3c7',borderRadius:'12px',textAlign:'center'}}><p style={{fontSize:'32px',fontWeight:'bold',color:'#d97706'}}>{Math.round((mCal*mSplit.f)/9)}g</p><p style={{fontWeight:'bold'}}>Fats</p></div></div></div>}
 
-        {activeTool==='stopwatch' && (
-          <div style={{textAlign:'center'}}>
-            <p style={{fontSize:'72px',fontWeight:'bold',margin:'32px 0',fontFamily:'monospace'}}>{Math.floor(swT/60)}:{(swT%60).toString().padStart(2,'0')}</p>
-            <div style={{display:'flex',gap:'12px',justifyContent:'center',marginBottom:'32px'}}><button onClick={()=>setSwRun(!swRun)} style={{padding:'16px 48px',background:swRun?'#f59e0b':'#10b981',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer'}}>{swRun?'⏸️ Pause':'▶️ Start'}</button><button onClick={()=>{setSwRun(false);setSwT(0);setLaps([]);}} style={{padding:'16px 48px',background:'#ef4444',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer'}}>🔄 Reset</button></div>
-            {swRun && <button onClick={()=>setLaps([...laps,swT])} style={{padding:'12px 32px',background:'#6366f1',color:'white',border:'none',borderRadius:'12px',fontWeight:'bold',cursor:'pointer',marginBottom:'24px'}}>🏁 Lap</button>}
-            {laps.length>0 && <div style={{background:'#f9fafb',borderRadius:'12px',padding:'16px',maxHeight:'200px',overflowY:'auto'}}><h3 style={{margin:'0 0 12px 0'}}>Laps</h3>{laps.map((l,i)=><div key={i} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #e5e7eb'}}><span>Lap {i+1}</span><span style={{fontWeight:'bold'}}>{Math.floor(l/60)}:{(l%60).toString().padStart(2,'0')}</span></div>)}</div>}
-          </div>
-        )}
+        {activeTool==='stopwatch' && <div style={{textAlign:'center'}}><p style={{fontSize:'72px',fontWeight:'bold',margin:'32px 0',fontFamily:'monospace'}}>{Math.floor(swT/60)}:{(swT%60).toString().padStart(2,'0')}</p><div style={{display:'flex',gap:'12px',justifyContent:'center',marginBottom:'32px'}}><button onClick={()=>setSwRun(!swRun)} style={{padding:'16px 48px',background:swRun?'#f59e0b':'#10b981',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(0,0,0,0.2)'}}>{swRun?'⏸️ Pause':'▶️ Start'}</button><button onClick={()=>{setSwRun(false);setSwT(0);setLaps([]);}} style={{padding:'16px 48px',background:'#ef4444',color:'white',border:'none',borderRadius:'12px',fontSize:'20px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(239,68,68,0.3)'}}>🔄 Reset</button></div>{swRun && <button onClick={()=>setLaps([...laps,swT])} style={{padding:'12px 32px',background:'#6366f1',color:'white',border:'none',borderRadius:'12px',fontWeight:'bold',cursor:'pointer',marginBottom:'24px',boxShadow:'0 4px 12px rgba(99,102,241,0.3)'}}>🏁 Lap</button>}{laps.length>0 && <div style={{background:'#f9fafb',borderRadius:'12px',padding:'16px',maxHeight:'200px',overflowY:'auto'}}><h3 style={{margin:'0 0 12px 0',fontSize:'16px',color:'#374151'}}>Laps</h3>{laps.map((l,i)=><div key={i} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #e5e7eb'}}><span>Lap {i+1}</span><span style={{fontWeight:'bold'}}>{Math.floor(l/60)}:{(l%60).toString().padStart(2,'0')}</span></div>)}</div>}</div>}
 
-        {activeTool==='bodyfat' && (
-          <div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px',marginBottom:'16px'}}>
-              <div><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Waist (cm)</label><input type="number" value={bfW} onChange={e=>setBfW(parseInt(e.target.value))} style={{width:'100%',padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb'}}/></div>
-              <div><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Neck (cm)</label><input type="number" value={bfN} onChange={e=>setBfN(parseInt(e.target.value))} style={{width:'100%',padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb'}}/></div>
-            </div>
-            <label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Height (cm)</label><input type="number" value={bfH} onChange={e=>setBfH(parseInt(e.target.value))} style={{width:'100%',padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb',marginBottom:'24px'}}/>
-            <div style={{padding:'24px',background:'#f3e8ff',borderRadius:'16px',border:'2px solid #a855f7',textAlign:'center'}}><p style={{fontSize:'16px',fontWeight:'bold',margin:'0 0 8px 0'}}>Body Fat</p><p style={{fontSize:'64px',fontWeight:'bold',color:'#9333ea',margin:0}}>{bfPct}%</p></div>
-          </div>
-        )}
+        {activeTool==='bodyfat' && <div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px',marginBottom:'16px'}}><div><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Waist (cm)</label><input type="number" value={bfW} onChange={e=>setBfW(parseInt(e.target.value))} style={{width:'100%',padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb'}}/></div><div><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Neck (cm)</label><input type="number" value={bfN} onChange={e=>setBfN(parseInt(e.target.value))} style={{width:'100%',padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb'}}/></div></div><label style={{fontWeight:'bold',marginBottom:'4px',display:'block'}}>Height (cm)</label><input type="number" value={bfH} onChange={e=>setBfH(parseInt(e.target.value))} style={{width:'100%',padding:'12px',borderRadius:'8px',border:'2px solid #e5e7eb',marginBottom:'24px'}}/><div style={{padding:'24px',background:'#f3e8ff',borderRadius:'16px',border:'2px solid #a855f7',textAlign:'center'}}><p style={{fontSize:'16px',fontWeight:'bold',margin:'0 0 8px 0'}}>Body Fat</p><p style={{fontSize:'64px',fontWeight:'bold',color:'#9333ea',margin:0}}>{bfPct}%</p></div></div>}
       </div>
     );
   };
@@ -618,7 +472,7 @@ export default function ToolsPage() {
           </div>
         ) : renderTool()}
       </div>
-      <style>{`@keyframes slideIn{from{transform:translate(-50%,-100%);opacity:0}to{transform:translate(-50%,0);opacity:1}}`}</style>
+      <style>{`@keyframes slideIn{from{transform:translate(-50%,-100%);opacity:0}to{transform:translate(-50%,0);opacity:1}} button { transition: all 0.2s ease; } button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important; }`}</style>
     </div>
   );
 }
