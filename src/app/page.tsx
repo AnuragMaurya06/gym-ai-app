@@ -46,66 +46,61 @@ export default function Home() {
     setShowHistory(false);
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError('');
-  setLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-  try {
-    const payload = {
-      goal: String(formData.goal),
-      experience: String(formData.experience),
-      daysPerWeek: Number(formData.daysPerWeek),
-      weightKg: Number(formData.weightKg)
-    };
+    try {
+      const payload = {
+        goal: String(formData.goal),
+        experience: String(formData.experience),
+        daysPerWeek: Number(formData.daysPerWeek),
+        weightKg: Number(formData.weightKg)
+      };
 
-    console.log('Sending:', payload);
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    const response = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
 
-    console.log('Response status:', response.status);
+      const data = await response.json();
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Server error: ${response.status}`);
+      if (!data.plan) {
+        throw new Error('No workout plan received');
+      }
+
+      const newPlan = {
+        id: Date.now().toString(),
+        plan: data.plan,
+        createdAt: new Date().toISOString(),
+        workoutData: []
+      };
+
+      const updated = [...savedPlans, newPlan];
+      setSavedPlans(updated);
+      
+      if (userId) {
+        localStorage.setItem(`gym_ai_plans_${userId}`, JSON.stringify(updated));
+      }
+      
+      setPlanId(newPlan.id);
+      setPlan(data.plan);
+      setWorkoutData([]);
+
+    } catch (err) {
+      console.error('Full error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate plan. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    const data = await response.json();
-    console.log('Received:', data);
-
-    if (!data.plan) {
-      throw new Error('No workout plan received');
-    }
-
-    const newPlan = {
-      id: Date.now().toString(),
-      plan: data.plan,
-      createdAt: new Date().toISOString(),
-      workoutData: []
-    };
-
-    const updated = [...savedPlans, newPlan];
-    setSavedPlans(updated);
-    
-    if (userId) {
-      localStorage.setItem(`gym_ai_plans_${userId}`, JSON.stringify(updated));
-    }
-    
-    setPlanId(newPlan.id);
-    setPlan(data.plan);
-    setWorkoutData([]);
-
-  } catch (err) {
-    console.error('Full error:', err);
-    setError(err instanceof Error ? err.message : 'Failed to generate plan. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleCheck = (di: number, ei: number, checked: boolean) => {
     const nd = [...workoutData];
@@ -115,7 +110,9 @@ export default function Home() {
     if (planId) {
       const up = savedPlans.map(p => p.id === planId ? { ...p, workoutData: nd } : p);
       setSavedPlans(up);
-      localStorage.setItem(storageKey, JSON.stringify(up));
+      if (userId) {
+        localStorage.setItem(`gym_ai_plans_${userId}`, JSON.stringify(up));
+      }
     }
   };
 
@@ -130,39 +127,9 @@ export default function Home() {
       <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#667eea 0%,#764ba2 100%)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
         <div style={{background:'white',padding:'50px',borderRadius:'30px',width:'100%',maxWidth:'450px',textAlign:'center',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
           <div style={{fontSize:'64px',marginBottom:'16px'}}>🏋️</div>
-          <h1 style={{
-  fontSize:'36px',
-  fontWeight:'bold',
-  marginBottom:'12px',
-  background:'linear-gradient(135deg,#667eea,#764ba2)',
-  WebkitBackgroundClip:'text',
-  backgroundClip:'text',
-  color:'transparent'  // Use standard 'color' instead of 'WebkitColor'
-}}>Gym AI</h1>
+          <h1 style={{fontSize:'36px',fontWeight:'bold',marginBottom:'12px',background:'linear-gradient(135deg,#667eea,#764ba2)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>Gym AI</h1>
           <p style={{color:'#666',marginBottom:'32px',fontSize:'16px'}}>Enter your unique ID to access your fitness journey</p>
-          
-          {/* FIX: Added explicit color: '#111827' and background: 'white' */}
-          <input 
-            type="text" 
-            value={inputId} 
-            onChange={e=>setInputId(e.target.value)} 
-            placeholder="Enter username (e.g., anurag007)" 
-            style={{
-              width:'100%',
-              padding:'18px',
-              borderRadius:'15px',
-              border:'3px solid #e5e7eb',
-              fontSize:'16px',
-              marginBottom:'20px',
-              textAlign:'center',
-              boxSizing:'border-box',
-              color: '#111827', // DARK TEXT
-              backgroundColor: 'white' // WHITE BACKGROUND
-            }} 
-            onKeyDown={e=>e.key==='Enter'&&handleLogin()} 
-            autoFocus
-          />
-          
+          <input type="text" value={inputId} onChange={e=>setInputId(e.target.value)} placeholder="Enter username (e.g., anurag007)" style={{width:'100%',padding:'18px',borderRadius:'15px',border:'3px solid #e5e7eb',fontSize:'16px',marginBottom:'20px',textAlign:'center',boxSizing:'border-box',color:'#111827',backgroundColor:'white'}} onKeyDown={e=>e.key==='Enter'&&handleLogin()} autoFocus/>
           <button onClick={handleLogin} style={{width:'100%',padding:'18px',background:'linear-gradient(135deg,#667eea,#764ba2)',color:'white',border:'none',borderRadius:'15px',fontSize:'18px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 15px rgba(102,126,234,0.4)'}}>Start Training 🚀</button>
         </div>
       </div>
@@ -186,7 +153,7 @@ export default function Home() {
                 </div>
                 <div style={{display:'flex',gap:'10px'}}>
                   <button onClick={()=>{setPlan(p.plan);setPlanId(p.id);setWorkoutData(p.workoutData||[]);setShowHistory(false);}} style={{padding:'10px 20px',background:'linear-gradient(135deg,#3b82f6,#2563eb)',color:'white',border:'none',borderRadius:'10px',fontWeight:'bold',cursor:'pointer'}}>Load</button>
-                  <button onClick={()=>{const up=savedPlans.filter(x=>x.id!==p.id);setSavedPlans(up);localStorage.setItem(storageKey,JSON.stringify(up));}} style={{padding:'10px 20px',background:'#ef4444',color:'white',border:'none',borderRadius:'10px',fontWeight:'bold',cursor:'pointer'}}>Delete</button>
+                  <button onClick={()=>{const up=savedPlans.filter(x=>x.id!==p.id);setSavedPlans(up);if(userId)localStorage.setItem(`gym_ai_plans_${userId}`,JSON.stringify(up));}} style={{padding:'10px 20px',background:'#ef4444',color:'white',border:'none',borderRadius:'10px',fontWeight:'bold',cursor:'pointer'}}>Delete</button>
                 </div>
               </div>
             </div>
@@ -226,8 +193,30 @@ export default function Home() {
                 return (
                   <div key={ei} style={{padding:'16px',background:done?'linear-gradient(135deg,#d1fae5,#a7f3d0)':'white',borderRadius:'14px',border:`2px solid ${done?'#10b981':'#e5e7eb'}`,marginBottom:'12px',display:'flex',alignItems:'center',gap:'16px',transition:'all 0.3s',boxShadow:done?'0 2px 8px rgba(16,185,129,0.2)':'none'}}>
                     <input type="checkbox" checked={done} onChange={e=>handleCheck(di,ei,e.target.checked)} style={{width:'24px',height:'24px',cursor:'pointer',accentColor:'#10b981'}}/>
+                    
+                    {/* GIF Image */}
+                    {ex.gifUrl && (
+                      <div style={{flexShrink:0}}>
+                        <img 
+                          src={ex.gifUrl} 
+                          alt={`${ex.name} demo`}
+                          style={{
+                            width:'80px',
+                            height:'80px',
+                            borderRadius:'12px',
+                            objectFit:'cover',
+                            border:'2px solid #e5e7eb',
+                            backgroundColor:'#f9fafb'
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    
                     <div style={{flex:1}}>
-                      <b style={{fontSize:'18px',textDecoration:done?'line-through':'none',color:done?'#6b7280':'#111',display:'block',marginBottom:'4px'}}>{ex.name}</b>
+                      <b style={{fontSize:'18px',textDecoration:done?'line-through':'none',color:done?'#6b7280':'#111',display:'block',marginBottom:'6px'}}>{ex.name}</b>
                       <div style={{color:'#666',fontSize:'14px'}}>🎯 {ex.muscles.join(', ')} • 📊 {ex.sets} sets × {ex.reps} reps</div>
                     </div>
                   </div>
@@ -246,7 +235,7 @@ export default function Home() {
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'32px'}}>
           <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
             <span style={{fontSize:'40px'}}>🏋️</span>
-       <h1 style={{fontSize:'36px',fontWeight:'bold',marginBottom:'12px',background:'linear-gradient(135deg,#667eea,#764ba2)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>Gym AI</h1>
+            <h1 style={{margin:0,fontSize:'32px',background:'linear-gradient(135deg,#667eea,#764ba2)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent',fontWeight:'bold'}}>Gym AI</h1>
           </div>
           <button onClick={handleLogout} style={{padding:'12px 24px',background:'linear-gradient(135deg,#ef4444,#dc2626)',color:'white',border:'none',borderRadius:'12px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(239,68,68,0.3)'}}>🚪 Logout</button>
         </div>
@@ -254,7 +243,6 @@ export default function Home() {
         <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'24px'}}>
           <div>
             <label style={{fontWeight:'bold',display:'block',marginBottom:'10px',color:'#667eea',fontSize:'16px'}}>🎯 What's your goal?</label>
-            {/* FIX: Added color: '#111827' and backgroundColor: 'white' */}
             <select value={formData.goal} onChange={e=>setFormData({...formData,goal:e.target.value})} style={{width:'100%',padding:'16px',borderRadius:'14px',border:'3px solid #e5e7eb',fontSize:'16px',backgroundColor:'white',color:'#111827',cursor:'pointer'}}>
               <option value="strength">💪 Build Strength</option>
               <option value="hypertrophy">🏋️ Build Muscle</option>
@@ -264,7 +252,6 @@ export default function Home() {
           </div>
           <div>
             <label style={{fontWeight:'bold',display:'block',marginBottom:'10px',color:'#667eea',fontSize:'16px'}}>📊 Experience Level</label>
-            {/* FIX: Added color: '#111827' and backgroundColor: 'white' */}
             <select value={formData.experience} onChange={e=>setFormData({...formData,experience:e.target.value})} style={{width:'100%',padding:'16px',borderRadius:'14px',border:'3px solid #e5e7eb',fontSize:'16px',backgroundColor:'white',color:'#111827',cursor:'pointer'}}>
               <option value="beginner">🌱 Beginner</option>
               <option value="intermediate">🚀 Intermediate</option>
@@ -278,7 +265,6 @@ export default function Home() {
           </div>
           <div>
             <label style={{fontWeight:'bold',display:'block',marginBottom:'10px',color:'#667eea',fontSize:'16px'}}>⚖️ Your Weight (kg)</label>
-            {/* FIX: Added color: '#111827' and backgroundColor: 'white' */}
             <input type="number" value={formData.weightKg} onChange={e=>setFormData({...formData,weightKg:parseInt(e.target.value)})} style={{width:'100%',padding:'16px',borderRadius:'14px',border:'3px solid #e5e7eb',fontSize:'16px',backgroundColor:'white',color:'#111827'}}/>
           </div>
           <button type="submit" disabled={loading} style={{padding:'20px',background:loading?'#9ca3af':'linear-gradient(135deg,#667eea,#764ba2)',color:'white',border:'none',borderRadius:'14px',fontSize:'20px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 6px 20px rgba(102,126,234,0.4)'}}>{loading?'⏳ Generating...':'🚀 Generate My Plan'}</button>
