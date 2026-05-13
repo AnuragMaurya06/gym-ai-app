@@ -4,14 +4,16 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { goal, experience, daysPerWeek, weightKg } = body;
-    
+
+    console.log('Received:', { goal, experience, daysPerWeek, weightKg });
+
     const workoutPlan = generateWorkoutPlan(goal, experience, Number(daysPerWeek), Number(weightKg));
-    
+
     return NextResponse.json({ success: true, plan: workoutPlan });
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to generate workout plan' }, 
+      { error: 'Failed to generate workout plan' },
       { status: 500 }
     );
   }
@@ -61,10 +63,10 @@ function generateWorkoutPlan(goal: string, experience: string, days: number, wei
     finalRoutine = baseRoutine.slice(0, days);
   }
 
-  return { 
-    goal, 
-    experience, 
-    weekPlan: finalRoutine, 
-    createdAt: new Date().toISOString() 
+  return {
+    goal,
+    experience,
+    weekPlan: finalRoutine,
+    createdAt: new Date().toISOString()
   };
 }
