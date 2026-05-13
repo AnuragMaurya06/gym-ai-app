@@ -18,9 +18,12 @@ const openDB = (): Promise<IDBDatabase> => {
 
 const saveSongToDB = async (id: string, title: string, blob: Blob) => {
   const db = await openDB();
-  const tx = db.transaction(STORE_NAME, 'readwrite');
-  tx.objectStore(STORE_NAME).put({ id, title, blob, addedAt: Date.now() });
-  return tx.complete;
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put({ id, title, blob, addedAt: Date.now() });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 };
 
 const loadSongsFromDB = async () => {
@@ -32,9 +35,12 @@ const loadSongsFromDB = async () => {
 
 const deleteSongFromDB = async (id: string) => {
   const db = await openDB();
-  const tx = db.transaction(STORE_NAME, 'readwrite');
-  tx.objectStore(STORE_NAME).delete(id);
-  return tx.complete;
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 };
 
 export default function ToolsPage() {

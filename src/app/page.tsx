@@ -90,7 +90,15 @@ export default function Home() {
       <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#667eea 0%,#764ba2 100%)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
         <div style={{background:'white',padding:'50px',borderRadius:'30px',width:'100%',maxWidth:'450px',textAlign:'center',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
           <div style={{fontSize:'64px',marginBottom:'16px'}}>🏋️</div>
-          <h1 style={{fontSize:'36px',fontWeight:'bold',marginBottom:'12px',background:'linear-gradient(135deg,#667eea,#764ba2)',WebkitBackgroundClip:'text',WebkitColor:'transparent'}}>Gym AI</h1>
+          <h1 style={{
+  fontSize:'36px',
+  fontWeight:'bold',
+  marginBottom:'12px',
+  background:'linear-gradient(135deg,#667eea,#764ba2)',
+  WebkitBackgroundClip:'text',
+  backgroundClip:'text',
+  color:'transparent'  // Use standard 'color' instead of 'WebkitColor'
+}}>Gym AI</h1>
           <p style={{color:'#666',marginBottom:'32px',fontSize:'16px'}}>Enter your unique ID to access your fitness journey</p>
           
           {/* FIX: Added explicit color: '#111827' and background: 'white' */}
@@ -198,7 +206,7 @@ export default function Home() {
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'32px'}}>
           <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
             <span style={{fontSize:'40px'}}>🏋️</span>
-            <h1 style={{margin:0,fontSize:'32px',background:'linear-gradient(135deg,#667eea,#764ba2)',WebkitBackgroundClip:'text',WebkitColor:'transparent',fontWeight:'bold'}}>Gym AI</h1>
+       <h1 style={{fontSize:'36px',fontWeight:'bold',marginBottom:'12px',background:'linear-gradient(135deg,#667eea,#764ba2)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>Gym AI</h1>
           </div>
           <button onClick={handleLogout} style={{padding:'12px 24px',background:'linear-gradient(135deg,#ef4444,#dc2626)',color:'white',border:'none',borderRadius:'12px',fontWeight:'bold',cursor:'pointer',boxShadow:'0 4px 12px rgba(239,68,68,0.3)'}}>🚪 Logout</button>
         </div>
