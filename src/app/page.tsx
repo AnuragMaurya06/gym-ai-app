@@ -46,26 +46,46 @@ export default function Home() {
     setShowHistory(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(''); setLoading(true);
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, daysPerWeek: Number(formData.daysPerWeek), weightKg: Number(formData.weightKg) })
-      });
-      const data = await res.json();
-      if (data.plan) {
-        const newPlan = { id: Date.now().toString(), plan: data.plan, createdAt: new Date().toISOString(), workoutData: [] };
-        const updated = [...savedPlans, newPlan];
-        setSavedPlans(updated);
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-        setPlanId(newPlan.id); setPlan(data.plan); setWorkoutData([]);
-      } else setError('Failed to generate plan.');
-    } catch { setError('Something went wrong.'); }
-    setLoading(false);
-  };
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError(''); 
+  setLoading(true);
+  
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        goal: formData.goal, 
+        experience: formData.experience, 
+        daysPerWeek: Number(formData.daysPerWeek), 
+        weightKg: Number(formData.weightKg) 
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to generate plan');
+    }
+    
+    if (data.plan) {
+      const newPlan = { id: Date.now().toString(), plan: data.plan, createdAt: new Date().toISOString(), workoutData: [] };
+      const updated = [...savedPlans, newPlan];
+      setSavedPlans(updated);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      setPlanId(newPlan.id); 
+      setPlan(data.plan); 
+      setWorkoutData([]);
+    } else {
+      throw new Error('No plan generated');
+    }
+  } catch (err: any) {
+    console.error('Error:', err);
+    setError(err.message || 'Failed to connect to server. Please check your internet connection.');
+  }
+  setLoading(false);
+};
 
   const handleCheck = (di: number, ei: number, checked: boolean) => {
     const nd = [...workoutData];
