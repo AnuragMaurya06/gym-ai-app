@@ -6,7 +6,7 @@ const exerciseGifs: Record<string, string> = {
   'Pull-Ups / Assisted Pull-Ups': 'https://media.giphy.com/media/4FqBMm3j1VJiE/giphy.gif',
   'Wide Grip Lat Pulldown': 'https://media.giphy.com/media/l41Yv28V0MqJqj5I4/giphy.gif',
   'Seated Cable Row': 'https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/giphy.gif',
-  'ChestSupported Row Machine': 'https://media.giphy.com/media/l41Yv28V0MqJqj5I4/giphy.gif',
+  'Chest Supported Row Machine': 'https://media.giphy.com/media/l41Yv28V0MqJqj5I4/giphy.gif',
   'Straight Arm Pulldown': 'https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/giphy.gif',
   'Barbell Curl': 'https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/giphy.gif',
   'Incline Dumbbell Curl': 'https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/giphy.gif',
@@ -66,7 +66,7 @@ function generateSpecificPlan(days: number, weight: number, goal: string, experi
         { name: 'Pull-Ups / Assisted Pull-Ups', sets: 4, reps: 'Failure', rest: '90s', muscles: ['Back'], estimatedTime: 10, estimatedCalories: 60, gifUrl: exerciseGifs['Pull-Ups / Assisted Pull-Ups'] },
         { name: 'Wide Grip Lat Pulldown', sets: 4, reps: '10-12', rest: '90s', muscles: ['Back'], estimatedTime: 10, estimatedCalories: 60, gifUrl: exerciseGifs['Wide Grip Lat Pulldown'] },
         { name: 'Seated Cable Row', sets: 4, reps: '10', rest: '90s', muscles: ['Back'], estimatedTime: 10, estimatedCalories: 60, gifUrl: exerciseGifs['Seated Cable Row'] },
-        { name: 'ChestSupported Row Machine', sets: 3, reps: '10-12', rest: '90s', muscles: ['Back'], estimatedTime: 8, estimatedCalories: 50, gifUrl: exerciseGifs['ChestSupported Row Machine'] },
+        { name: 'Chest Supported Row Machine', sets: 3, reps: '10-12', rest: '90s', muscles: ['Back'], estimatedTime: 8, estimatedCalories: 50, gifUrl: exerciseGifs['Chest Supported Row Machine'] },
         { name: 'Straight Arm Pulldown', sets: 3, reps: '12', rest: '60s', muscles: ['Back', 'Triceps'], estimatedTime: 8, estimatedCalories: 50, gifUrl: exerciseGifs['Straight Arm Pulldown'] },
         { name: 'Barbell Curl', sets: 4, reps: '8-10', rest: '60s', muscles: ['Biceps'], estimatedTime: 10, estimatedCalories: 50, gifUrl: exerciseGifs['Barbell Curl'] },
         { name: 'Incline Dumbbell Curl', sets: 3, reps: '10', rest: '60s', muscles: ['Biceps'], estimatedTime: 8, estimatedCalories: 40, gifUrl: exerciseGifs['Incline Dumbbell Curl'] },
@@ -74,10 +74,54 @@ function generateSpecificPlan(days: number, weight: number, goal: string, experi
         { name: 'Cable Curl', sets: 3, reps: '12', rest: '60s', muscles: ['Biceps'], estimatedTime: 8, estimatedCalories: 40, gifUrl: exerciseGifs['Cable Curl'] }
       ]
     },
-    // ... Add other days with gifUrl for each exercise
+    {
+      day: 'Tuesday / Friday',
+      focus: 'Chest + Triceps',
+      exercises: [
+        { name: 'Barbell Bench Press', sets: 4, reps: '6-8', rest: '180s', muscles: ['Chest', 'Triceps'], estimatedTime: 15, estimatedCalories: 100, gifUrl: exerciseGifs['Barbell Bench Press'] },
+        { name: 'Incline Dumbbell Press', sets: 4, reps: '8-10', rest: '90s', muscles: ['Chest'], estimatedTime: 12, estimatedCalories: 80, gifUrl: exerciseGifs['Incline Dumbbell Press'] },
+        { name: 'Chest Press Machine', sets: 3, reps: '10', rest: '90s', muscles: ['Chest'], estimatedTime: 10, estimatedCalories: 60, gifUrl: exerciseGifs['Chest Press Machine'] },
+        { name: 'Incline Smith Machine Press', sets: 3, reps: '10', rest: '90s', muscles: ['Chest'], estimatedTime: 10, estimatedCalories: 60, gifUrl: exerciseGifs['Incline Smith Machine Press'] },
+        { name: 'Cable Fly', sets: 3, reps: '12-15', rest: '60s', muscles: ['Chest'], estimatedTime: 8, estimatedCalories: 50, gifUrl: exerciseGifs['Cable Fly'] },
+        { name: 'Pec Deck Fly', sets: 3, reps: '12', rest: '60s', muscles: ['Chest'], estimatedTime: 8, estimatedCalories: 50, gifUrl: exerciseGifs['Pec Deck Fly'] },
+        { name: 'Rope Pushdown', sets: 4, reps: '10-12', rest: '60s', muscles: ['Triceps'], estimatedTime: 10, estimatedCalories: 50, gifUrl: exerciseGifs['Rope Pushdown'] },
+        { name: 'Overhead Rope Extension', sets: 3, reps: '10-12', rest: '60s', muscles: ['Triceps'], estimatedTime: 8, estimatedCalories: 40, gifUrl: exerciseGifs['Overhead Rope Extension'] },
+        { name: 'Skull Crushers', sets: 3, reps: '10', rest: '60s', muscles: ['Triceps'], estimatedTime: 8, estimatedCalories: 40, gifUrl: exerciseGifs['Skull Crushers'] },
+        { name: 'Dips', sets: 3, reps: 'Failure', rest: '90s', muscles: ['Triceps', 'Chest'], estimatedTime: 8, estimatedCalories: 50, gifUrl: exerciseGifs['Dips'] }
+      ]
+    },
+    {
+      day: 'Wednesday / Saturday',
+      focus: 'Legs + Shoulders',
+      exercises: [
+        { name: 'Barbell Squat', sets: 4, reps: '6-8', rest: '180s', muscles: ['Legs'], estimatedTime: 15, estimatedCalories: 120, gifUrl: exerciseGifs['Barbell Squat'] },
+        { name: 'Leg Press', sets: 4, reps: '10', rest: '120s', muscles: ['Legs'], estimatedTime: 12, estimatedCalories: 80, gifUrl: exerciseGifs['Leg Press'] },
+        { name: 'Romanian Deadlift (RDL)', sets: 4, reps: '8-10', rest: '120s', muscles: ['Legs', 'Back'], estimatedTime: 12, estimatedCalories: 80, gifUrl: exerciseGifs['Romanian Deadlift (RDL)'] },
+        { name: 'Walking Lunges', sets: 3, reps: '12 steps/leg', rest: '90s', muscles: ['Legs', 'Glutes'], estimatedTime: 10, estimatedCalories: 70, gifUrl: exerciseGifs['Walking Lunges'] },
+        { name: 'Leg Extension', sets: 3, reps: '12', rest: '60s', muscles: ['Legs'], estimatedTime: 8, estimatedCalories: 50, gifUrl: exerciseGifs['Leg Extension'] },
+        { name: 'Leg Curl', sets: 3, reps: '12', rest: '60s', muscles: ['Legs'], estimatedTime: 8, estimatedCalories: 50, gifUrl: exerciseGifs['Leg Curl'] },
+        { name: 'Standing Calf Raise', sets: 4, reps: '15', rest: '60s', muscles: ['Calves'], estimatedTime: 8, estimatedCalories: 40, gifUrl: exerciseGifs['Standing Calf Raise'] },
+        { name: 'Dumbbell Shoulder Press', sets: 4, reps: '8-10', rest: '90s', muscles: ['Shoulders'], estimatedTime: 10, estimatedCalories: 60, gifUrl: exerciseGifs['Dumbbell Shoulder Press'] },
+        { name: 'Lateral Raise', sets: 4, reps: '12-15', rest: '60s', muscles: ['Shoulders'], estimatedTime: 8, estimatedCalories: 40, gifUrl: exerciseGifs['Lateral Raise'] },
+        { name: 'Rear Delt Fly Machine', sets: 3, reps: '12', rest: '60s', muscles: ['Shoulders'], estimatedTime: 8, estimatedCalories: 40, gifUrl: exerciseGifs['Rear Delt Fly Machine'] },
+        { name: 'Face Pull', sets: 3, reps: '15', rest: '60s', muscles: ['Shoulders', 'Back'], estimatedTime: 8, estimatedCalories: 40, gifUrl: exerciseGifs['Face Pull'] },
+        { name: 'Shrugs', sets: 3, reps: '12', rest: '60s', muscles: ['Traps'], estimatedTime: 6, estimatedCalories: 30, gifUrl: exerciseGifs['Shrugs'] }
+      ]
+    }
   ];
 
-  // ... Rest of your code
+  let finalRoutine = coreRoutine.slice(0, days);
+  
+  if (days === 6) {
+    finalRoutine = [
+      { ...coreRoutine[0], day: 'Monday' },
+      { ...coreRoutine[1], day: 'Tuesday' },
+      { ...coreRoutine[2], day: 'Wednesday' },
+      { ...coreRoutine[0], day: 'Thursday' },
+      { ...coreRoutine[1], day: 'Friday' },
+      { ...coreRoutine[2], day: 'Saturday' }
+    ];
+  }
 
   return {
     goal,
