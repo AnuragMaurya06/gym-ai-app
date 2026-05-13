@@ -5,7 +5,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { goal, experience, daysPerWeek, weightKg } = body;
     
-    // Validate input
     if (!goal || !experience || !daysPerWeek || !weightKg) {
       return NextResponse.json(
         { error: 'Missing required fields' }, 
@@ -18,14 +17,13 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to generate plan', details: error instanceof Error ? error.message : 'Unknown error' }, 
+      { error: error instanceof Error ? error.message : 'Failed to generate plan' }, 
       { status: 500 }
     );
   }
 }
 
 function generateWorkoutPlan(goal: string, experience: string, days: number, weight: number) {
-  // Your workout generation logic here
   const baseRoutine = [
     {
       day: 'Day 1',
@@ -51,7 +49,7 @@ function generateWorkoutPlan(goal: string, experience: string, days: number, wei
       focus: 'Legs + Shoulders',
       exercises: [
         { name: 'Barbell Squat', sets: 4, reps: '6-8', rest: '180s', muscles: ['Legs'] },
-        { name: 'Leg Press', sets: 4, reps: '10', rest: '120s', muscles: ['Legs'] },
+        { name: 'Leg Press', sets: 4, reps: '10-12', rest: '90s', muscles: ['Legs'] },
         { name: 'Dumbbell Shoulder Press', sets: 4, reps: '8-10', rest: '90s', muscles: ['Shoulders'] },
       ]
     }
@@ -69,13 +67,27 @@ function generateWorkoutPlan(goal: string, experience: string, days: number, wei
     finalRoutine = baseRoutine.slice(0, days);
   }
 
+  // SAFER PARSING - Fix the error
   const plan = finalRoutine.map(day => ({
     ...day,
-    exercises: day.exercises.map(ex => ({
-      ...ex,
-      estimatedTime: Math.ceil((ex.sets * (parseInt(ex.reps) || 10) * 4 + (ex.sets - 1) * parseInt(ex.rest)) / 60),
-      estimatedCalories: Math.round(4.5 * weight * (Math.ceil((ex.sets * (parseInt(ex.reps) || 10) * 4 + (ex.sets - 1) * parseInt(ex.rest)) / 60) / 60))
-    }))
+    exercises: day.exercises.map(ex => {
+      // Safely parse reps (take first number from range like "5-8")
+      const repsMatch = ex.reps.match(/\d+/);
+      const repsNum = repsMatch ? parseInt(repsMatch[0]) : 10;
+      
+      // Safely parse rest (remove 's' and parse number)
+      const restMatch = ex.rest.match(/\d+/);
+      const restSec = restMatch ? parseInt(restMatch[0]) : 60;
+      
+      const estimatedTime = Math.ceil((ex.sets * repsNum * 4 + (ex.sets - 1) * restSec) / 60);
+      const estimatedCalories = Math.round(4.5 * weight * (estimatedTime / 60));
+      
+      return {
+        ...ex,
+        estimatedTime,
+        estimatedCalories
+      };
+    })
   }));
 
   return { goal, experience, weekPlan: plan, createdAt: new Date().toISOString() };
