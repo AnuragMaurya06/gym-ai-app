@@ -5,9 +5,12 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { goal, experience, daysPerWeek, weightKg } = body;
 
-    console.log('Received:', { goal, experience, daysPerWeek, weightKg });
-
-    const workoutPlan = generateWorkoutPlan(goal, experience, Number(daysPerWeek), Number(weightKg));
+    const workoutPlan = generateWorkoutPlan(
+      String(goal),
+      String(experience),
+      Number(daysPerWeek),
+      Number(weightKg)
+    );
 
     return NextResponse.json({ success: true, plan: workoutPlan });
   } catch (error) {
@@ -70,4 +73,3 @@ function generateWorkoutPlan(goal: string, experience: string, days: number, wei
     createdAt: new Date().toISOString()
   };
 }
-// Updated: 05/13/2026 23:19:07
