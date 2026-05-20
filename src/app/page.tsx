@@ -23,11 +23,14 @@ export default function Home() {
   const [savedPlans, setSavedPlans] = useState<any[]>([]);
   const [workoutData, setWorkoutData] = useState<any[]>([]);
 
+  // Load user on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('gym_ai_current_user');
     if (savedUser) {
       setCurrentUser(savedUser);
-      loadUserData(savedUser);
+      setTimeout(() => {
+        loadUserData(savedUser);
+      }, 50);
     }
   }, []);
 
@@ -55,10 +58,12 @@ export default function Home() {
     localStorage.setItem('gym_ai_users', JSON.stringify(usersDB));
   };
 
+  // ✅ FIXED: Complete handleAuth function with login persistence
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Please enter a valid email');
@@ -70,31 +75,62 @@ export default function Home() {
       setLoading(false);
       return;
     }
+    
     const usersDB = JSON.parse(localStorage.getItem('gym_ai_users') || '{}');
     const cleanEmail = email.toLowerCase().trim();
+    
     if (isLogin) {
       const user = usersDB[cleanEmail];
-      if (!user) { setError('User not found. Please register.'); setLoading(false); return; }
-      if (user.password !== password) { setError('Incorrect password'); setLoading(false); return; }
+      if (!user) { 
+        setError('User not found. Please register.'); 
+        setLoading(false); 
+        return; 
+      }
+      if (user.password !== password) { 
+        setError('Incorrect password'); 
+        setLoading(false); 
+        return; 
+      }
+      
       localStorage.setItem('gym_ai_current_user', cleanEmail);
       setCurrentUser(cleanEmail);
       loadUserData(cleanEmail);
+      
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+      
     } else {
-      if (usersDB[cleanEmail]) { setError('Email already registered.'); setLoading(false); return; }
-      usersDB[cleanEmail] = { email: cleanEmail, password: password, createdAt: new Date().toISOString() };
+      if (usersDB[cleanEmail]) { 
+        setError('Email already registered. Please login.'); 
+        setLoading(false); 
+        return; 
+      }
+      
+      usersDB[cleanEmail] = { 
+        email: cleanEmail, 
+        password: password, 
+        createdAt: new Date().toISOString() 
+      };
+      
       localStorage.setItem('gym_ai_users', JSON.stringify(usersDB));
       localStorage.setItem('gym_ai_current_user', cleanEmail);
       setCurrentUser(cleanEmail);
       setShowOnboarding(true);
     }
+    
     setLoading(false);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('gym_ai_current_user');
     setCurrentUser(null);
-    setPlan(null); setPlanId(null); setShowHistory(false); setShowSettings(false);
-    setEmail(''); setPassword('');
+    setPlan(null); 
+    setPlanId(null); 
+    setShowHistory(false); 
+    setShowSettings(false);
+    setEmail(''); 
+    setPassword('');
   };
 
   const completeOnboarding = () => {
@@ -143,6 +179,34 @@ export default function Home() {
     while (nd.length <= di) nd.push([]);
     nd[di][ei] = checked;
     setWorkoutData(nd);
+    if (planId && currentUser) {
+      const up = savedPlans.map(p => p.id === planId ? { ...p, workoutData: nd } : p);
+      setSavedPlans(up);
+      saveUserData(currentUser, { workoutPlans: up });
+    }
+  };
+
+  // ✅ NEW: Check if all exercises in a day are complete
+  const isDayComplete = (dayIndex: number) => {
+    if (!plan || !workoutData[dayIndex]) return false;
+    const totalExercises = plan.weekPlan[dayIndex].exercises.length;
+    const completedCount = workoutData[dayIndex].filter(Boolean).length;
+    return completedCount === totalExercises && totalExercises > 0;
+  };
+
+  // ✅ NEW: Mark all exercises in a day as complete with one click
+  const completeDay = (dayIndex: number) => {
+    if (!plan) return;
+    const nd = [...workoutData];
+    const dayExercises = plan.weekPlan[dayIndex].exercises.length;
+    
+    if (!nd[dayIndex]) nd[dayIndex] = [];
+    for (let i = 0; i < dayExercises; i++) {
+      nd[dayIndex][i] = true;
+    }
+    
+    setWorkoutData(nd);
+    
     if (planId && currentUser) {
       const up = savedPlans.map(p => p.id === planId ? { ...p, workoutData: nd } : p);
       setSavedPlans(up);
@@ -298,7 +362,28 @@ export default function Home() {
           </div>
           {plan.weekPlan.map((day:any, di:number) => (
             <div key={di} style={{padding:'24px 20px',background:'#f9fafb',borderRadius:'20px',marginBottom:'16px',border:'2px solid #e5e7eb'}}>
-              <h3 style={{color:'#667eea',margin:'0 0 16px 0',fontSize:'20px',fontWeight:'bold'}}>📅 {day.day} - {day.focus}</h3>
+              {/* ✅ NEW: Day Header with Complete Button */}
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px',flexWrap:'wrap',gap:'8px'}}>
+                <h3 style={{color:'#667eea',margin:0,fontSize:'20px',fontWeight:'bold'}}>📅 {day.day} - {day.focus}</h3>
+                <button 
+                  onClick={() => completeDay(di)}
+                  style={{
+                    padding:'8px 16px',
+                    background: isDayComplete(di) ? '#10b981' : '#667eea',
+                    color:'white',
+                    border:'none',
+                    borderRadius:'8px',
+                    fontWeight:'bold',
+                    cursor:'pointer',
+                    fontSize:'13px',
+                    whiteSpace:'nowrap',
+                    transition:'all 0.3s'
+                  }}
+                >
+                  {isDayComplete(di) ? '✅ Day Complete' : '✓ Mark Day Done'}
+                </button>
+              </div>
+              
               {day.exercises.map((ex:any, ei:number) => {
                 const done = workoutData[di]?.[ei] || false;
                 return (
@@ -311,7 +396,8 @@ export default function Home() {
                     display:'flex',
                     alignItems:'center',
                     gap:'12px',
-                    opacity:done?0.7:1
+                    opacity:done?0.7:1,
+                    transition:'all 0.3s'
                   }}>
                     <input type="checkbox" checked={done} onChange={(e) => handleCheck(di, ei, e.target.checked)} style={{width:'22px',height:'22px',cursor:'pointer',accentColor:'#10b981',flexShrink:0}}/>
                     {ex.gifUrl && <img src={ex.gifUrl} alt={ex.name} style={{width:'70px',height:'70px',borderRadius:'10px',objectFit:'cover',border:'2px solid #e5e7eb',flexShrink:0}} onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}/>}
